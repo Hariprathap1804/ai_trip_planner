@@ -77,7 +77,14 @@ ALTER TABLE public.journeys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read on hubs" ON public.hubs FOR SELECT USING (true);
-CREATE POLICY "Allow public read on journeys" ON public.journeys FOR SELECT USING (true);
-CREATE POLICY "Allow public full access on bookings" ON public.bookings FOR ALL USING (true);
-CREATE POLICY "Allow public full access on user_preferences" ON public.user_preferences FOR ALL USING (true);
+DROP POLICY IF EXISTS "Allow public read on hubs" ON public.hubs;
+CREATE POLICY "Allow public all on hubs" ON public.hubs FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read on journeys" ON public.journeys;
+CREATE POLICY "Allow public all on journeys" ON public.journeys FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public full access on bookings" ON public.bookings;
+CREATE POLICY "Allow public full access on bookings" ON public.bookings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public full access on user_preferences" ON public.user_preferences;
+CREATE POLICY "Allow public full access on user_preferences" ON public.user_preferences FOR ALL USING (true) WITH CHECK (true);

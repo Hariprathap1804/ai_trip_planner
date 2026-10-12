@@ -1,11 +1,69 @@
 """
-AI Service: Provider-Independent NLP Engine, Action Proposal, and State Synchronizer
+AI Service: Provider-Independent NLP Engine with Groq Cloud AI and Deterministic Fallback
 """
 
 import re
+import json
+import logging
 from typing import Dict, Any, List, Optional
+from app.config import settings
 from app.services.journey_service import JourneyService, normalize_city
 from app.supabase_client import DatabaseRepository
+
+logger = logging.getLogger(__name__)
+
+groq_client = None
+if settings.GROQ_API_KEY:
+    try:
+        from groq import Groq
+        groq_client = Groq(api_key=settings.GROQ_API_KEY)
+        logger.info(f"Groq Cloud AI initialized with model: {settings.GROQ_MODEL}")
+    except Exception as e:
+        logger.warning(f"Could not initialize Groq SDK: {e}")
+        groq_client = None
+
+SYSTEM_PROMPT = """You are TripPilot AI, an intelligent conversational multimodal travel companion for India.
+You help users discover, filter, compare, and plan journeys across SIX transportation modes:
+1. Flights
+2. Trains
+3. Metro
+4. Buses
+5. Cabs
+6. Autos
+And Multimodal journeys (combining cabs, high-speed rail, and metro).
+
+Supported Hubs & Cities: Bengaluru, Chennai, Mumbai, Delhi, Hyderabad, Pune, Goa.
+
+When the user gives a travel request, you MUST return a valid JSON object strictly matching this schema:
+{
+  "reply_text": "Friendly, professional explanation of recommendations and actions taken.",
+  "action_proposal": {
+    "action": "search_journeys" | "apply_filters" | "sort_results" | "plan_multimodal_trip" | "get_bookings" | "cancel_demo_booking",
+    "parameters": {
+      "origin": "City Name (e.g. Bengaluru)",
+      "destination": "City Name (e.g. Chennai)",
+      "modes": ["flight", "train", "bus", "metro", "cab", "auto"],
+      "filters": {
+        "max_budget": number or null,
+        "flight_direct_only": boolean or null,
+        "bus_ac_only": boolean or null,
+        "time_of_day": ["early_morning" | "morning" | "afternoon" | "evening"] or null
+      },
+      "sort_by": "recommended" | "cheapest" | "fastest" | "earliest_arrival",
+      "reference_number": "TP-XXXXXX" (only if cancel action)
+    },
+    "explanation": "Clear summary of the action to be applied to the website",
+    "requires_user_confirmation": false (true only for cancel actions)
+  },
+  "suggested_followups": ["Question 1", "Question 2", "Question 3"]
+}
+
+Important Rules:
+- Currency is Indian Rupee (₹).
+- Never invent unavailable real flights/trains. Stay within simulated travel bounds.
+- If user wants to cancel a booking, set action to "cancel_demo_booking" and requires_user_confirmation: true.
+- Output ONLY raw JSON without markdown code fences or backticks.
+"""
 
 class AIService:
 
@@ -17,8 +75,43 @@ class AIService:
         active_filters: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Parses user natural language query, extracts intent, and maps to structured actions.
+        Routes user query to Groq Cloud AI if configured; otherwise uses deterministic parser.
         """
+        if groq_client and settings.GROQ_API_KEY:
+            try:
+                logger.info("Processing user prompt via Groq Cloud AI...")
+                context_str = f"Current User State: Origin={current_search.get('origin', 'Bengaluru') if current_search else 'Bengaluru'}, Destination={current_search.get('destination', 'Chennai') if current_search else 'Chennai'}."
+                
+                completion = groq_client.chat.completions.create(
+                    model=settings.GROQ_MODEL,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": f"{context_str}\nUser Prompt: {prompt}"}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.2,
+                    max_tokens=1000
+                )
+                
+                raw_json = completion.choices[0].message.content
+                parsed = json.loads(raw_json)
+                
+                # Validate response structure
+                if "reply_text" in parsed and "action_proposal" in parsed:
+                    return parsed
+            except Exception as e:
+                logger.warning(f"Groq Cloud AI processing failed or timed out: {e}. Falling back to deterministic engine.")
+
+        # High-precision deterministic parser fallback
+        return await cls._deterministic_parse(prompt, current_search, active_filters)
+
+    @classmethod
+    async def _deterministic_parse(
+        cls,
+        prompt: str,
+        current_search: Optional[Dict[str, Any]] = None,
+        active_filters: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         text = prompt.strip().lower()
 
         # 1. Booking Management Intents
@@ -54,25 +147,21 @@ class AIService:
         origin = None
         destination = None
 
-        # Pattern: from X to Y
         from_to_match = re.search(r"from\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+?)(?:$|\s+tomorrow|\s+under|\s+before|\s+with|\s+in)", text)
         if from_to_match:
             origin = from_to_match.group(1).strip()
             destination = from_to_match.group(2).strip()
         else:
-            # Pattern: to Y from X
             to_from_match = re.search(r"to\s+([a-zA-Z\s]+?)\s+from\s+([a-zA-Z\s]+?)(?:$|\s+tomorrow|\s+under|\s+before|\s+with|\s+in)", text)
             if to_from_match:
                 destination = to_from_match.group(1).strip()
                 origin = to_from_match.group(2).strip()
         
-        # Fallback to current search if not specified in prompt
         if not origin and current_search and current_search.get("origin"):
             origin = current_search["origin"]
         if not destination and current_search and current_search.get("destination"):
             destination = current_search["destination"]
 
-        # Default fallback if still blank
         if not origin:
             origin = "Bengaluru"
         if not destination:
@@ -105,7 +194,7 @@ class AIService:
         if arr_match:
             arrival_before = arr_match.group(1).upper()
 
-        # 6. Extract Sorting / Optimization
+        # 6. Extract Sorting
         sort_by = "recommended"
         if "cheapest" in text or "lowest price" in text or "budget" in text:
             sort_by = "cheapest"
@@ -121,8 +210,8 @@ class AIService:
                 "action_proposal": {
                     "action": "plan_multimodal_trip",
                     "parameters": {
-                        "origin": origin,
-                        "destination": destination,
+                        "origin": origin.title(),
+                        "destination": destination.title(),
                         "modes": ["cab", "train", "cab"]
                     },
                     "explanation": f"Compose door-to-door multimodal itinerary for {origin.title()} to {destination.title()}.",
@@ -131,7 +220,7 @@ class AIService:
                 "suggested_followups": ["View multimodal timeline", "Compare with direct flight", "Book this itinerary"]
             }
 
-        # 8. Standard Journey Search & Filter Proposal
+        # 8. Standard Journey Search
         applied_filters = {}
         if max_budget:
             applied_filters["max_budget"] = max_budget
@@ -141,7 +230,6 @@ class AIService:
         if "ac" in text:
             applied_filters["bus_ac_only"] = True
 
-        # Run query to find actual matching sample
         matches = await JourneyService.search_journeys(
             origin=origin,
             destination=destination,
