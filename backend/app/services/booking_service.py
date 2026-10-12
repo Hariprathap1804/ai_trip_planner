@@ -1,0 +1,77 @@
+"""
+Booking Service: Simulated Booking Lifecycle, PNR Reference Generation, and Persistence
+"""
+
+import random
+import uuid
+from datetime import datetime
+from typing import Dict, Any, List, Optional
+from app.supabase_client import DatabaseRepository
+from app.models.schemas import BookingCreate, BookingUpdate
+
+class BookingService:
+
+    @staticmethod
+    def generate_reference() -> str:
+        """Generates realistic human-readable simulated booking reference TP-XXXXXX"""
+        digits = "".join([str(random.randint(0, 9)) for _ in range(6)])
+        return f"TP-{digits}"
+
+    @classmethod
+    async def create_booking(cls, payload: BookingCreate, journey_data: Dict[str, Any]) -> Dict[str, Any]:
+        booking_id = f"bk_{uuid.uuid4().hex[:10]}"
+        ref_number = cls.generate_reference()
+        now_iso = datetime.now().isoformat()
+
+        base_fare = float(journey_data.get("total_fare", 1000))
+        taxes = round(base_fare * 0.12, 2)
+        total_amount = round(base_fare + taxes, 2)
+
+        booking_record = {
+            "id": booking_id,
+            "reference_number": ref_number,
+            "created_at": now_iso,
+            "status": "CONFIRMED",
+            "journey": journey_data,
+            "passengers": [p.dict() if hasattr(p, "dict") else p for p in payload.passengers],
+            "fare_breakdown": {
+                "base_fare": base_fare,
+                "taxes_and_fees": taxes,
+                "discounts": 0.0,
+                "total_amount": total_amount
+            },
+            "contact_email": payload.contact_email,
+            "contact_phone": payload.contact_phone,
+            "notes": payload.notes or "Simulated prototype booking.",
+            "is_simulated_demo": True
+        }
+
+        saved = await DatabaseRepository.save_booking(booking_record)
+        return saved
+
+    @classmethod
+    async def get_all_bookings(cls) -> List[Dict[str, Any]]:
+        return await DatabaseRepository.get_bookings()
+
+    @classmethod
+    async def get_booking(cls, booking_id: str) -> Optional[Dict[str, Any]]:
+        return await DatabaseRepository.get_booking_by_id(booking_id)
+
+    @classmethod
+    async def cancel_booking(cls, booking_id: str) -> Optional[Dict[str, Any]]:
+        return await DatabaseRepository.update_booking_status(booking_id, "CANCELLED")
+
+    @classmethod
+    async def update_booking_details(cls, booking_id: str, updates: BookingUpdate) -> Optional[Dict[str, Any]]:
+        booking = await DatabaseRepository.get_booking_by_id(booking_id)
+        if not booking:
+            return None
+        
+        if updates.contact_email:
+            booking["contact_email"] = updates.contact_email
+        if updates.contact_phone:
+            booking["contact_phone"] = updates.contact_phone
+        if updates.notes:
+            booking["notes"] = updates.notes
+
+        return booking
