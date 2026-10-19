@@ -3,6 +3,7 @@ import { AIMessage, AIActionProposal } from '../types/ai';
 import { apiClient } from '../services/apiClient';
 import { useSearchStore } from './useSearchStore';
 import { useBookingStore } from './useBookingStore';
+import { usePlannerStore } from './usePlannerStore';
 
 interface AIState {
   isOpen: boolean;
@@ -110,6 +111,18 @@ export const useAiStore = create<AIState>((set, get) => ({
       if (p.filters) searchStore.setFilters(p.filters);
       if (p.sort_by) searchStore.setSortBy(p.sort_by);
       await searchStore.executeSearch();
+    } else if (proposal.action === 'plan_multimodal_trip') {
+      const p = proposal.parameters;
+      if (p.origin) searchStore.setOrigin(p.origin);
+      if (p.destination) searchStore.setDestination(p.destination);
+      if (p.legs && Array.isArray(p.legs) && p.legs.length > 0) {
+        usePlannerStore.getState().setInitialLegs(p.legs);
+      }
+    } else if (proposal.action === 'quick_book') {
+      const j = proposal.parameters.journey;
+      if (j) {
+        bookingStore.setDraftJourney(j);
+      }
     } else if (proposal.action === 'cancel_demo_booking') {
       const ref = proposal.parameters.reference_number;
       if (ref) {

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import journeys, multimodal, bookings, ai, metadata
+from app.routers import journeys, multimodal, bookings, ai, metadata, payments
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -12,7 +12,8 @@ app = FastAPI(
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.get_cors_origins(),
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -23,6 +24,7 @@ app.include_router(metadata.router)
 app.include_router(journeys.router)
 app.include_router(multimodal.router)
 app.include_router(bookings.router)
+app.include_router(payments.router)
 app.include_router(ai.router)
 
 @app.get("/api/health", tags=["Health"])

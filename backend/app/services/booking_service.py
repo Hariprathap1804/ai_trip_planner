@@ -18,7 +18,15 @@ class BookingService:
         return f"TP-{digits}"
 
     @classmethod
-    async def create_booking(cls, payload: BookingCreate, journey_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_booking(
+        cls,
+        payload: BookingCreate,
+        journey_data: Dict[str, Any],
+        payment_status: str = "PAID",
+        razorpay_order_id: Optional[str] = None,
+        razorpay_payment_id: Optional[str] = None,
+        payment_method: str = "simulated"
+    ) -> Dict[str, Any]:
         booking_id = f"bk_{uuid.uuid4().hex[:10]}"
         ref_number = cls.generate_reference()
         now_iso = datetime.now().isoformat()
@@ -43,7 +51,11 @@ class BookingService:
             "contact_email": payload.contact_email,
             "contact_phone": payload.contact_phone,
             "notes": payload.notes or "Simulated prototype booking.",
-            "is_simulated_demo": True
+            "is_simulated_demo": True,
+            "payment_status": payment_status,
+            "razorpay_order_id": razorpay_order_id,
+            "razorpay_payment_id": razorpay_payment_id,
+            "payment_method": payment_method
         }
 
         saved = await DatabaseRepository.save_booking(booking_record)

@@ -1,8 +1,31 @@
+# Dependencies
 node_modules/
+.venv/
+venv/
+env/
+
+# Build artifacts
 dist/
-.env
+build/
+
+# Python cache
 __pycache__/
-*.pyc
-.system_generated/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment and sensitive secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs and runtime
 *.log
+.system_generated/
+.playwright-mcp/
+.tempmediaStorage/
+
+# Operating system files
 .DS_Store
+Thumbs.db

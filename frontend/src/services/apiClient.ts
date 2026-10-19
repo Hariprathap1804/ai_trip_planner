@@ -2,13 +2,28 @@ import { Journey } from '../types/journey';
 import { DemoBooking, Passenger } from '../types/booking';
 import { SearchFilters, SortOption } from '../types/search';
 import { AIActionProposal } from '../types/ai';
+import { PaymentConfig, RazorpayOrder } from '../types/payment';
 
-const API_BASE = '/api';
+const RAW_API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || '';
+const API_BASE = RAW_API_URL ? `${RAW_API_URL.replace(/\/$/, '')}/api` : '/api';
+
+export function getApiEndpoint(path: string): string {
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE}${cleanPath}`;
+}
+
+export function getFullApiUrl(path: string): URL {
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (API_BASE.startsWith('http://') || API_BASE.startsWith('https://')) {
+    return new URL(`${API_BASE}${cleanPath}`);
+  }
+  return new URL(`${window.location.origin}${API_BASE}${cleanPath}`);
+}
 
 export const apiClient = {
   async getCities(): Promise<any[]> {
     try {
-      const res = await fetch(`${API_BASE}/metadata/cities`);
+      const res = await fetch(getApiEndpoint('/metadata/cities'));
       if (!res.ok) throw new Error('Failed to fetch transit hubs');
       return await res.json();
     } catch (e) {
@@ -25,7 +40,7 @@ export const apiClient = {
     filters?: SearchFilters;
     sort_by?: SortOption;
   }): Promise<Journey[]> {
-    const url = new URL(`${window.location.origin}${API_BASE}/journeys/search`);
+    const url = getFullApiUrl('/journeys/search');
     url.searchParams.set('origin', params.origin);
     url.searchParams.set('destination', params.destination);
     if (params.date) url.searchParams.set('date', params.date);
@@ -49,13 +64,13 @@ export const apiClient = {
   },
 
   async getJourneyById(id: string): Promise<Journey> {
-    const res = await fetch(`${API_BASE}/journeys/${id}`);
+    const res = await fetch(getApiEndpoint(`/journeys/${id}`));
     if (!res.ok) throw new Error('Journey not found');
     return await res.json();
   },
 
   async planMultimodal(legs: any[]): Promise<Journey> {
-    const res = await fetch(`${API_BASE}/multimodal/plan`, {
+    const res = await fetch(getApiEndpoint('/multimodal/plan'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(legs),
@@ -65,13 +80,13 @@ export const apiClient = {
   },
 
   async getBookings(): Promise<DemoBooking[]> {
-    const res = await fetch(`${API_BASE}/bookings`);
+    const res = await fetch(getApiEndpoint('/bookings'));
     if (!res.ok) throw new Error('Failed to fetch bookings');
     return await res.json();
   },
 
   async getBookingById(id: string): Promise<DemoBooking> {
-    const res = await fetch(`${API_BASE}/bookings/${id}`);
+    const res = await fetch(getApiEndpoint(`/bookings/${id}`));
     if (!res.ok) throw new Error('Booking not found');
     return await res.json();
   },
@@ -83,7 +98,7 @@ export const apiClient = {
     contact_phone: string;
     notes?: string;
   }): Promise<DemoBooking> {
-    const res = await fetch(`${API_BASE}/bookings`, {
+    const res = await fetch(getApiEndpoint('/bookings'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -100,7 +115,7 @@ export const apiClient = {
   },
 
   async cancelBooking(id: string): Promise<DemoBooking> {
-    const res = await fetch(`${API_BASE}/bookings/${id}/cancel`, {
+    const res = await fetch(getApiEndpoint(`/bookings/${id}/cancel`), {
       method: 'POST',
     });
     if (!res.ok) throw new Error('Failed to cancel booking');
@@ -116,7 +131,7 @@ export const apiClient = {
     action_proposal?: AIActionProposal;
     suggested_followups?: string[];
   }> {
-    const res = await fetch(`${API_BASE}/ai/chat`, {
+    const res = await fetch(getApiEndpoint('/ai/chat'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -130,8 +145,64 @@ export const apiClient = {
   },
 
   async getQuickPrompts(): Promise<{ label: string; prompt: string }[]> {
-    const res = await fetch(`${API_BASE}/ai/quick-prompts`);
+    const res = await fetch(getApiEndpoint('/ai/quick-prompts'));
     if (!res.ok) return [];
     return await res.json();
   },
+
+  async getPaymentConfig(): Promise<PaymentConfig> {
+    const res = await fetch(getApiEndpoint('/payments/config'));
+    if (!res.ok) throw new Error('Failed to fetch payment configuration');
+    return await res.json();
+  },
+
+  async createPaymentOrder(params: {
+    amount: number;
+    currency?: string;
+    receipt?: string;
+    notes?: Record<string, any>;
+  }): Promise<{ success: boolean; order: RazorpayOrder }> {
+    const res = await fetch(getApiEndpoint('/payments/create-order'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: params.amount,
+        currency: params.currency || 'INR',
+        receipt: params.receipt,
+        notes: params.notes,
+      }),
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Failed to create payment order');
+    }
+    return await res.json();
+  },
+
+  async verifyPaymentAndBook(params: {
+    order_id: string;
+    payment_id: string;
+    signature: string;
+    booking_payload: {
+      journey_id?: string;
+      journey?: Journey;
+      passengers: Passenger[];
+      contact_email: string;
+      contact_phone: string;
+      notes?: string;
+    };
+    journey_data?: Journey;
+  }): Promise<{ success: boolean; message: string; booking: DemoBooking }> {
+    const res = await fetch(getApiEndpoint('/payments/verify-and-book'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Payment verification failed');
+    }
+    return await res.json();
+  },
 };
+

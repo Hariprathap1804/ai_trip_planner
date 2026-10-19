@@ -70,19 +70,24 @@ class JourneyService:
 
         results = []
         for j in all_journeys:
-            j_orig_city = normalize_city(j["origin"]["city"])
-            j_dest_city = normalize_city(j["destination"]["city"])
+            orig_data = j.get("origin") if isinstance(j.get("origin"), dict) else {}
+            dest_data = j.get("destination") if isinstance(j.get("destination"), dict) else {}
+
+            j_orig_city = normalize_city(orig_data.get("city") or j.get("origin_city") or "")
+            j_dest_city = normalize_city(dest_data.get("city") or j.get("destination_city") or "")
+            orig_name = (orig_data.get("name") or "").lower()
+            dest_name = (dest_data.get("name") or "").lower()
 
             # Match origin and destination if provided
-            if orig_norm and orig_norm not in j_orig_city and orig_norm not in j["origin"]["name"].lower():
+            if orig_norm and orig_norm not in j_orig_city and orig_norm not in orig_name:
                 continue
-            if dest_norm and dest_norm not in j_dest_city and dest_norm not in j["destination"]["name"].lower():
+            if dest_norm and dest_norm not in j_dest_city and dest_norm not in dest_name:
                 continue
 
             # Match mode if filtered
+            j_modes = j.get("modes") or [j.get("mode", "flight")]
             if modes and len(modes) > 0:
-                # Journey must contain at least one of the selected modes
-                if not any(m in modes for m in j["modes"]):
+                if not any(m in modes for m in j_modes):
                     continue
 
             # Filter checks

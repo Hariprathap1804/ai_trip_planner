@@ -119,6 +119,12 @@ export const MyBookingsPage: React.FC = () => {
                     >
                       {b.status}
                     </span>
+                    {b.payment_status && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        {b.payment_method?.includes('razorpay') ? 'Razorpay Paid' : 'Paid'}
+                      </span>
+                    )}
                     <span className="text-xs text-slate-400">• {new Date(b.created_at).toLocaleDateString()}</span>
                   </div>
 

@@ -19,14 +19,29 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     
+    # Razorpay Payment Gateway (Test Mode)
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "")
+    
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
+    
     # CORS
     CORS_ORIGINS: List[str] = [
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "*"
     ]
+
+    def get_cors_origins(self) -> List[str]:
+        origins = list(self.CORS_ORIGINS)
+        if self.FRONTEND_URL:
+            clean_url = self.FRONTEND_URL.strip().rstrip("/")
+            if clean_url and clean_url not in origins:
+                origins.append(clean_url)
+        return origins
 
     class Config:
         env_file = ".env"

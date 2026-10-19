@@ -56,6 +56,10 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     contact_phone TEXT NOT NULL,
     notes TEXT,
     is_simulated_demo BOOLEAN DEFAULT TRUE,
+    payment_status TEXT NOT NULL DEFAULT 'PAID', -- PENDING, PAID, FAILED, REFUNDED
+    razorpay_order_id TEXT,
+    razorpay_payment_id TEXT,
+    payment_method TEXT DEFAULT 'razorpay_test', -- razorpay_test, simulated_bypass
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

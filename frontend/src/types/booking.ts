@@ -31,4 +31,8 @@ export interface DemoBooking {
   contact_phone: string;
   notes?: string;
   is_simulated_demo: boolean;
+  payment_status?: 'PAID' | 'PENDING' | 'FAILED' | string;
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  payment_method?: string;
 }

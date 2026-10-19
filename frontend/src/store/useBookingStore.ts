@@ -18,6 +18,20 @@ interface BookingState {
     contact_phone: string;
     notes?: string;
   }) => Promise<DemoBooking>;
+  verifyAndBook: (params: {
+    order_id: string;
+    payment_id: string;
+    signature: string;
+    booking_payload: {
+      journey_id?: string;
+      journey?: Journey;
+      passengers: Passenger[];
+      contact_email: string;
+      contact_phone: string;
+      notes?: string;
+    };
+    journey_data?: Journey;
+  }) => Promise<DemoBooking>;
   cancelBooking: (id: string) => Promise<void>;
 }
 
@@ -49,6 +63,22 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         isLoading: false,
       });
       return created;
+    } catch (err: any) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  verifyAndBook: async (params) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await apiClient.verifyPaymentAndBook(params);
+      set({
+        bookings: [res.booking, ...get().bookings],
+        activeDraftJourney: null,
+        isLoading: false,
+      });
+      return res.booking;
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
       throw err;

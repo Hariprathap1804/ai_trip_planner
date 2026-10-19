@@ -135,10 +135,48 @@ export const BookingConfirmationPage: React.FC = () => {
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block mb-0.5">Total Fare (Simulated)</span>
+              <span className="text-slate-400 block mb-0.5">Total Fare</span>
               <span className="font-extrabold text-slate-900 font-mono text-sm">
                 ₹{booking.fare_breakdown.total_amount.toLocaleString()}
               </span>
+            </div>
+          </div>
+
+          {/* Payment Verification Receipt */}
+          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold text-slate-800">Razorpay Payment Receipt</span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                {booking.payment_status || 'PAID'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Gateway</span>
+                <span className="font-semibold text-slate-800">
+                  {booking.payment_method?.includes('razorpay') ? 'Razorpay (Test Mode)' : 'Simulated Gateway'}
+                </span>
+              </div>
+              {booking.razorpay_payment_id && (
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Payment ID</span>
+                  <span className="font-mono text-xs font-semibold text-indigo-950 bg-indigo-50 px-1.5 py-0.5 rounded">
+                    {booking.razorpay_payment_id}
+                  </span>
+                </div>
+              )}
+              {booking.razorpay_order_id && (
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Order Reference</span>
+                  <span className="font-mono text-[11px] text-slate-600 truncate block">
+                    {booking.razorpay_order_id}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

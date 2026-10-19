@@ -117,6 +117,10 @@ class DemoBooking(BaseModel):
     contact_phone: str
     notes: Optional[str] = None
     is_simulated_demo: bool = True
+    payment_status: Optional[str] = "PAID"
+    razorpay_order_id: Optional[str] = None
+    razorpay_payment_id: Optional[str] = None
+    payment_method: Optional[str] = "simulated"
 
 class BookingCreate(BaseModel):
     journey_id: Optional[str] = None
@@ -131,8 +135,21 @@ class BookingUpdate(BaseModel):
     contact_phone: Optional[str] = None
     notes: Optional[str] = None
 
+class PaymentOrderCreate(BaseModel):
+    amount: float
+    currency: str = "INR"
+    receipt: Optional[str] = None
+    notes: Optional[Dict[str, Any]] = None
+
+class PaymentVerifyAndBook(BaseModel):
+    order_id: str
+    payment_id: str
+    signature: str
+    booking_payload: BookingCreate
+    journey_data: Optional[Dict[str, Any]] = None
+
 class AIActionProposal(BaseModel):
-    action: str # search_journeys, apply_filters, clear_filters, sort_results, compare_journeys, plan_multimodal_trip, cancel_demo_booking
+    action: str # search_journeys, apply_filters, clear_filters, sort_results, compare_journeys, plan_multimodal_trip, quick_book, cancel_demo_booking
     parameters: Dict[str, Any]
     explanation: str
     requires_user_confirmation: bool = False
