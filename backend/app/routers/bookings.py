@@ -9,17 +9,16 @@ router = APIRouter(prefix="/api/bookings", tags=["Bookings"])
 
 @router.get("")
 async def get_all_bookings(current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)) -> List[Dict[str, Any]]:
+    if not current_user:
+        return []
     all_bookings = await BookingService.get_all_bookings()
-    if current_user:
-        # Filter for user's bookings, or fallback to all demo bookings if user has none yet
-        user_id = current_user.get("id")
-        user_email = current_user.get("email", "").lower()
-        user_bookings = [
-            b for b in all_bookings 
-            if b.get("user_id") == user_id or b.get("contact_email", "").lower() == user_email
-        ]
-        return user_bookings if user_bookings else all_bookings
-    return all_bookings
+    user_id = current_user.get("id")
+    user_email = current_user.get("email", "").lower()
+    user_bookings = [
+        b for b in all_bookings 
+        if b.get("user_id") == user_id or b.get("contact_email", "").lower() == user_email
+    ]
+    return user_bookings
 
 @router.get("/{booking_id}")
 async def get_booking(booking_id: str) -> Dict[str, Any]:

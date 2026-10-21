@@ -111,6 +111,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: false,
       error: null,
     });
+    // Clear in-memory bookings state
+    import('./useBookingStore').then(({ useBookingStore }) => {
+      useBookingStore.setState({ bookings: [], activeDraftJourney: null });
+    }).catch(() => {});
   },
 
   initAuth: async () => {

@@ -44,6 +44,11 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   setDraftJourney: (activeDraftJourney) => set({ activeDraftJourney }),
 
   fetchBookings: async () => {
+    const token = localStorage.getItem('trippilot_auth_token');
+    if (!token) {
+      set({ bookings: [], isLoading: false });
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
       const list = await apiClient.getBookings();

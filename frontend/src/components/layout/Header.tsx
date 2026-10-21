@@ -86,22 +86,24 @@ export const Header: React.FC = () => {
             <Route className="w-3.5 h-3.5" />
             Trip Planner
           </Link>
-          <Link
-            to="/bookings"
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-              isActive('/bookings')
-                ? 'bg-white text-indigo-950 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <Ticket className="w-3.5 h-3.5" />
-            My Bookings
-            {activeBookingsCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 bg-indigo-600 text-white text-[10px] font-bold rounded-full">
-                {activeBookingsCount}
-              </span>
-            )}
-          </Link>
+          {isAuthenticated && (
+            <Link
+              to="/bookings"
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                isActive('/bookings')
+                  ? 'bg-white text-indigo-950 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <Ticket className="w-3.5 h-3.5" />
+              My Bookings
+              {activeBookingsCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 bg-indigo-600 text-white text-[10px] font-bold rounded-full">
+                  {activeBookingsCount}
+                </span>
+              )}
+            </Link>
+          )}
         </nav>
 
         {/* Right Section: AI Assistant + User Auth */}

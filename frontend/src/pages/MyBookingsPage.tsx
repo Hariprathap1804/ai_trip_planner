@@ -27,6 +27,38 @@ export const MyBookingsPage: React.FC = () => {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto py-20 px-4 text-center space-y-6">
+        <div className="w-16 h-16 rounded-3xl bg-amber-50 border border-amber-200/80 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+          <Lock className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign In to View Bookings</h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Your travel bookings, tickets, and boarding passes are private. Please sign in or create an account to view and manage your travel bookings.
+          </p>
+        </div>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => openAuthModal('login', 'Please sign in to view your bookings.')}
+            className="px-5 py-2.5 bg-indigo-900 hover:bg-indigo-950 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-all"
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => openAuthModal('register', 'Create an account to start booking trips.')}
+            className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-all"
+          >
+            Create Account
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -47,7 +79,7 @@ export const MyBookingsPage: React.FC = () => {
       </div>
 
       {/* Auth Status Notice */}
-      {isAuthenticated && user ? (
+      {user && (
         <div className="p-3.5 px-4 rounded-2xl bg-indigo-50/80 border border-indigo-200/60 shadow-xs flex items-center justify-between text-xs text-indigo-950">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -58,20 +90,6 @@ export const MyBookingsPage: React.FC = () => {
           <span className="text-[11px] font-semibold text-indigo-700 bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100">
             Personal Account
           </span>
-        </div>
-      ) : (
-        <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/70 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900">
-          <div className="flex items-center gap-2.5">
-            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>You are viewing default demo reservations. Sign in to link and view your personal bookings.</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => openAuthModal('login', 'Sign in to access your personal booking records.')}
-            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-all self-start sm:self-auto"
-          >
-            Sign In
-          </button>
         </div>
       )}
 
