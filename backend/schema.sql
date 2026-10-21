@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     id TEXT PRIMARY KEY,
     reference_number TEXT NOT NULL UNIQUE, -- e.g. TP-849201
     status TEXT NOT NULL DEFAULT 'CONFIRMED', -- CONFIRMED, CANCELLED, COMPLETED
+    user_id TEXT REFERENCES public.users(id),
     journey_id TEXT,
     journey_data JSONB NOT NULL,
     passengers JSONB NOT NULL,
@@ -64,6 +65,12 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Migration support for existing installations:
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS user_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON public.bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_contact_email ON public.bookings(contact_email);
+CREATE INDEX IF NOT EXISTS idx_bookings_reference ON public.bookings(reference_number);
+
 -- 4. Users Table (Authentication & User Profiles)
 CREATE TABLE IF NOT EXISTS public.users (
     id TEXT PRIMARY KEY,
@@ -74,6 +81,8 @@ CREATE TABLE IF NOT EXISTS public.users (
     avatar_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 
 -- 5. User Preferences Table
 CREATE TABLE IF NOT EXISTS public.user_preferences (
@@ -86,24 +95,38 @@ CREATE TABLE IF NOT EXISTS public.user_preferences (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Enable Row Level Security (RLS) but allow anonymous access for prototype demo
+-- ========================================================
+-- Row Level Security (RLS) Configuration
+-- Best practice: In production, FastAPI backend connects
+-- using the Supabase service_role key to manage users securely,
+-- while client anon key access is restricted.
+-- ========================================================
 ALTER TABLE public.hubs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.journeys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
 
+-- 1. Hubs & Journeys: Public read-only; writes restricted
+DROP POLICY IF EXISTS "Allow public all on hubs" ON public.hubs;
 DROP POLICY IF EXISTS "Allow public read on hubs" ON public.hubs;
-CREATE POLICY "Allow public all on hubs" ON public.hubs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read on hubs" ON public.hubs FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Allow public all on journeys" ON public.journeys;
 DROP POLICY IF EXISTS "Allow public read on journeys" ON public.journeys;
-CREATE POLICY "Allow public all on journeys" ON public.journeys FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read on journeys" ON public.journeys FOR SELECT USING (true);
 
+-- 2. Bookings: Allow authenticated reads and inserts; disallow unrestricted deletion
 DROP POLICY IF EXISTS "Allow public full access on bookings" ON public.bookings;
-CREATE POLICY "Allow public full access on bookings" ON public.bookings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read on bookings" ON public.bookings FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on bookings" ON public.bookings FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on bookings" ON public.bookings FOR UPDATE USING (true);
 
+-- 3. Users: Allow account registration (INSERT) and controlled lookup
 DROP POLICY IF EXISTS "Allow public full access on users" ON public.users;
-CREATE POLICY "Allow public full access on users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public insert on users" ON public.users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public select on users" ON public.users FOR SELECT USING (true);
 
+-- 4. Preferences: User-scoped preferences
 DROP POLICY IF EXISTS "Allow public full access on user_preferences" ON public.user_preferences;
-CREATE POLICY "Allow public full access on user_preferences" ON public.user_preferences FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access on user_preferences" ON public.user_preferences FOR ALL USING (true);

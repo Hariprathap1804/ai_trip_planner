@@ -55,6 +55,15 @@ export const BookingReviewPage: React.FC = () => {
   const [showSimulatedModal, setShowSimulatedModal] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<RazorpayOrder | null>(null);
 
+  // Client-side regex & validation feedback state
+  const [touched, setTouched] = useState<{ email?: boolean; phone?: boolean; name?: boolean }>({});
+  const cleanEmail = email.trim();
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail);
+  const cleanPhoneDigits = phone.replace(/[\s\-()+]/g, '');
+  const isPhoneValid = /^\d{7,15}$/.test(cleanPhoneDigits);
+  const cleanName = fullName.trim();
+  const isNameValid = cleanName.length >= 2 && !/[<>{}[\];]/.test(cleanName);
+
   useEffect(() => {
     // Pre-load payment configuration and Razorpay script
     apiClient
@@ -170,16 +179,20 @@ export const BookingReviewPage: React.FC = () => {
 
   const handleSimulatedPaymentSuccess = async () => {
     if (!currentOrder) return;
+    if (!isNameValid || !isEmailValid || !isPhoneValid || age < 1 || age > 120) {
+      setPaymentError('Please provide valid passenger details before completing booking.');
+      return;
+    }
     setIsProcessingPayment(true);
     setShowSimulatedModal(false);
 
     const passenger: Passenger = {
-      full_name: fullName,
+      full_name: cleanName,
       age,
       gender,
       seat_preference: seatPreference,
-      email,
-      phone,
+      email: cleanEmail,
+      phone: phone.trim(),
     };
 
     const simulatedPaymentId = `pay_${Math.random().toString(36).substring(2, 12)}`;
@@ -217,15 +230,39 @@ export const BookingReviewPage: React.FC = () => {
       return;
     }
 
+    // Client-side regex & boundaries validation
+    if (!isNameValid) {
+      setPaymentError('Passenger full name must be at least 2 characters and cannot contain special characters.');
+      setTouched((prev) => ({ ...prev, name: true }));
+      return;
+    }
+
+    if (age < 1 || age > 120) {
+      setPaymentError('Passenger age must be between 1 and 120 years.');
+      return;
+    }
+
+    if (!isEmailValid) {
+      setPaymentError('Please enter a valid email address (e.g. traveller@example.com).');
+      setTouched((prev) => ({ ...prev, email: true }));
+      return;
+    }
+
+    if (!isPhoneValid) {
+      setPaymentError('Please enter a valid contact phone number (7 to 15 digits).');
+      setTouched((prev) => ({ ...prev, phone: true }));
+      return;
+    }
+
     setIsProcessingPayment(true);
 
     const passenger: Passenger = {
-      full_name: fullName,
+      full_name: cleanName,
       age,
       gender,
       seat_preference: seatPreference,
-      email,
-      phone,
+      email: cleanEmail,
+      phone: phone.trim(),
     };
 
     if (paymentMethod === 'simulated') {
@@ -377,10 +414,18 @@ export const BookingReviewPage: React.FC = () => {
                 <input
                   type="text"
                   value={fullName}
+                  onBlur={() => setTouched((p) => ({ ...p, name: true }))}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600/20"
+                  className={`w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 ${
+                    touched.name && !isNameValid
+                      ? 'border-rose-400 focus:ring-rose-500/20'
+                      : 'border-slate-200 focus:ring-indigo-600/20'
+                  }`}
                 />
+                {touched.name && !isNameValid && (
+                  <p className="text-[10px] text-rose-500 mt-1 font-medium">Please enter at least 2 characters with no special characters.</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -389,7 +434,7 @@ export const BookingReviewPage: React.FC = () => {
                   <input
                     type="number"
                     min="1"
-                    max="100"
+                    max="120"
                     value={age}
                     onChange={(e) => setAge(parseInt(e.target.value) || 25)}
                     required
@@ -417,10 +462,18 @@ export const BookingReviewPage: React.FC = () => {
                   <input
                     type="email"
                     value={email}
+                    onBlur={() => setTouched((p) => ({ ...p, email: true }))}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600/20"
+                    className={`w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 ${
+                      touched.email && !isEmailValid
+                        ? 'border-rose-400 focus:ring-rose-500/20'
+                        : 'border-slate-200 focus:ring-indigo-600/20'
+                    }`}
                   />
+                  {touched.email && !isEmailValid && (
+                    <p className="text-[10px] text-rose-500 mt-1 font-medium">Please enter a valid email address.</p>
+                  )}
                 </div>
 
                 <div>
@@ -428,10 +481,18 @@ export const BookingReviewPage: React.FC = () => {
                   <input
                     type="text"
                     value={phone}
+                    onBlur={() => setTouched((p) => ({ ...p, phone: true }))}
                     onChange={(e) => setPhone(e.target.value)}
                     required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600/20"
+                    className={`w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 ${
+                      touched.phone && !isPhoneValid
+                        ? 'border-rose-400 focus:ring-rose-500/20'
+                        : 'border-slate-200 focus:ring-indigo-600/20'
+                    }`}
                   />
+                  {touched.phone && !isPhoneValid && (
+                    <p className="text-[10px] text-rose-500 mt-1 font-medium">Please enter a valid 7–15 digit phone.</p>
+                  )}
                 </div>
               </div>
 

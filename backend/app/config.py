@@ -24,13 +24,24 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "")
     
     # Auth Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "trippilot-auth-secret-key-2026-production-token")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     TOKEN_EXPIRE_DAYS: int = int(os.getenv("TOKEN_EXPIRE_DAYS", "7"))
+
+    def __init__(self, **values):
+        super().__init__(**values)
+        if not self.SECRET_KEY:
+            if self.ENVIRONMENT.lower() == "production":
+                raise ValueError("CRITICAL SECURITY ERROR: SECRET_KEY environment variable MUST be set in production!")
+            import secrets
+            import logging
+            logging.getLogger(__name__).warning("No SECRET_KEY found in environment. Generated ephemeral 256-bit cryptographic secret for local development.")
+            self.SECRET_KEY = secrets.token_hex(32)
     
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
+    ADDITIONAL_CORS_ORIGINS: str = os.getenv("ADDITIONAL_CORS_ORIGINS", "")
     
-    # CORS
-    CORS_ORIGINS: List[str] = [
+    # Development CORS Origins (Excluded in production)
+    DEV_CORS_ORIGINS: List[str] = [
         "http://localhost:5175",
         "http://127.0.0.1:5175",
         "http://localhost:5174",
@@ -42,11 +53,26 @@ class Settings(BaseSettings):
     ]
 
     def get_cors_origins(self) -> List[str]:
-        origins = list(self.CORS_ORIGINS)
+        origins: List[str] = []
+        
+        # Only allow development origins outside of production
+        if self.ENVIRONMENT.lower() != "production":
+            origins.extend(self.DEV_CORS_ORIGINS)
+
+        # Parse FRONTEND_URL (supports single or comma-separated list)
         if self.FRONTEND_URL:
-            clean_url = self.FRONTEND_URL.strip().rstrip("/")
-            if clean_url and clean_url not in origins:
-                origins.append(clean_url)
+            for url in self.FRONTEND_URL.split(","):
+                clean_url = url.strip().rstrip("/")
+                if clean_url and clean_url not in origins:
+                    origins.append(clean_url)
+
+        # Parse optional ADDITIONAL_CORS_ORIGINS
+        if self.ADDITIONAL_CORS_ORIGINS:
+            for url in self.ADDITIONAL_CORS_ORIGINS.split(","):
+                clean_url = url.strip().rstrip("/")
+                if clean_url and clean_url not in origins:
+                    origins.append(clean_url)
+
         return origins
 
     class Config:

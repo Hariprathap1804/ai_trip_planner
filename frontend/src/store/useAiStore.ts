@@ -4,6 +4,7 @@ import { apiClient } from '../services/apiClient';
 import { useSearchStore } from './useSearchStore';
 import { useBookingStore } from './useBookingStore';
 import { usePlannerStore } from './usePlannerStore';
+import { useAuthStore } from './useAuthStore';
 
 interface AIState {
   isOpen: boolean;
@@ -130,6 +131,8 @@ export const useAiStore = create<AIState>((set, get) => ({
       }
     } else if (proposal.action === 'get_bookings') {
       await bookingStore.fetchBookings();
+    } else if (proposal.action === 'open_login') {
+      useAuthStore.getState().openAuthModal('login', 'Please sign in to view your travel bookings');
     }
 
     // Mark action as executed in conversation

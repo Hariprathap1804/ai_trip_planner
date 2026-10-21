@@ -13,9 +13,11 @@ class BookingService:
 
     @staticmethod
     def generate_reference() -> str:
-        """Generates realistic human-readable simulated booking reference TP-XXXXXX"""
-        digits = "".join([str(random.randint(0, 9)) for _ in range(6)])
-        return f"TP-{digits}"
+        """Generates cryptographically secure high-entropy booking reference TP-XXXXXXXX"""
+        import secrets
+        charset = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+        token = "".join(secrets.choice(charset) for _ in range(8))
+        return f"TP-{token}"
 
     @classmethod
     async def create_booking(
@@ -55,7 +57,8 @@ class BookingService:
             "payment_status": payment_status,
             "razorpay_order_id": razorpay_order_id,
             "razorpay_payment_id": razorpay_payment_id,
-            "payment_method": payment_method
+            "payment_method": payment_method,
+            "user_id": payload.user_id
         }
 
         saved = await DatabaseRepository.save_booking(booking_record)
@@ -64,6 +67,11 @@ class BookingService:
     @classmethod
     async def get_all_bookings(cls) -> List[Dict[str, Any]]:
         return await DatabaseRepository.get_bookings()
+
+    @classmethod
+    async def get_user_bookings(cls, user_id: str, user_email: str) -> List[Dict[str, Any]]:
+        """Filters bookings by user ID and verified contact email directly via database queries"""
+        return await DatabaseRepository.get_bookings_by_user(user_id=user_id, email=user_email)
 
     @classmethod
     async def get_booking(cls, booking_id: str) -> Optional[Dict[str, Any]]:

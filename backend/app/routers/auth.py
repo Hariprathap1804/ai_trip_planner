@@ -38,9 +38,33 @@ async def get_current_user_required(user: Optional[Dict[str, Any]] = Depends(get
         )
     return user
 
+import time
+from collections import defaultdict
+from fastapi import APIRouter, HTTPException, Header, Depends, status, Request
+
+_auth_rate_limits = defaultdict(list)
+
+def check_rate_limit(request: Request, action: str, max_attempts: int = 10, window_seconds: int = 60) -> None:
+    """Sliding-window IP rate limiter to protect against automated credential stuffing and brute force"""
+    client_ip = request.client.host if request.client else "unknown"
+    key = f"{action}:{client_ip}"
+    now = time.time()
+    
+    attempts = [t for t in _auth_rate_limits[key] if now - t < window_seconds]
+    if len(attempts) >= max_attempts:
+        logger.warning(f"Rate limit exceeded on {action} from IP {client_ip}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many {action} attempts. Please wait {window_seconds} seconds before trying again.",
+            headers={"Retry-After": str(window_seconds)}
+        )
+    attempts.append(now)
+    _auth_rate_limits[key] = attempts
+
 @router.post("/register", response_model=AuthResponse)
-async def register(payload: UserRegister) -> Dict[str, Any]:
-    """Register a new user account"""
+async def register(payload: UserRegister, request: Request) -> Dict[str, Any]:
+    """Register a new user account with rate limiting"""
+    check_rate_limit(request, "registration", max_attempts=10, window_seconds=60)
     try:
         result = await AuthService.register(
             name=payload.name,
@@ -62,8 +86,9 @@ async def register(payload: UserRegister) -> Dict[str, Any]:
         )
 
 @router.post("/login", response_model=AuthResponse)
-async def login(payload: UserLogin) -> Dict[str, Any]:
-    """Login with email and password"""
+async def login(payload: UserLogin, request: Request) -> Dict[str, Any]:
+    """Login with email and password with brute-force rate limiting"""
+    check_rate_limit(request, "login", max_attempts=10, window_seconds=60)
     try:
         result = await AuthService.login(
             email=payload.email,

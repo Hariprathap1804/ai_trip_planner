@@ -79,10 +79,13 @@ class AIService:
         cls,
         prompt: str,
         current_search: Optional[Dict[str, Any]] = None,
-        active_filters: Optional[Dict[str, Any]] = None
+        active_filters: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
+        user_email: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Routes user query to Groq Cloud AI if configured; otherwise uses deterministic parser.
+        Enforces user boundary context on personal bookings queries.
         """
         if groq_client and settings.GROQ_API_KEY:
             try:
@@ -112,6 +115,17 @@ class AIService:
 
                     p_action = proposal.get("action")
                     params = proposal.get("parameters", {})
+
+                    if p_action == "get_bookings":
+                        if not user_id and not user_email:
+                            parsed["reply_text"] = "Please sign in to your TripPilot AI account to view and manage your travel bookings."
+                            proposal["action"] = "open_login"
+                            proposal["parameters"] = {}
+                            proposal["explanation"] = "Sign in to access your travel bookings."
+                        else:
+                            bookings = await DatabaseRepository.get_bookings_by_user(user_id=user_id or "", email=user_email or "")
+                            active_count = len([b for b in bookings if b.get("status") == "CONFIRMED"])
+                            parsed["reply_text"] = f"You currently have {active_count} active simulated booking{'s' if active_count != 1 else ''} in your account."
                     
                     # Edge-case safety guard: If user prompt is purely conversational or lacks travel intent, cancel unwanted action proposal
                     prompt_lower = prompt.lower().strip()
@@ -219,14 +233,16 @@ class AIService:
                 logger.warning(f"Groq Cloud AI processing failed or timed out: {e}. Falling back to deterministic engine.")
 
         # High-precision deterministic parser fallback
-        return await cls._deterministic_parse(prompt, current_search, active_filters)
+        return await cls._deterministic_parse(prompt, current_search, active_filters, user_id=user_id, user_email=user_email)
 
     @classmethod
     async def _deterministic_parse(
         cls,
         prompt: str,
         current_search: Optional[Dict[str, Any]] = None,
-        active_filters: Optional[Dict[str, Any]] = None
+        active_filters: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
+        user_email: Optional[str] = None
     ) -> Dict[str, Any]:
         text = prompt.strip().lower()
 
@@ -351,8 +367,19 @@ class AIService:
 
         # 7. Booking Management Intents (Cancel / View)
         if "cancel" in text and ("booking" in text or "tp-" in text):
-            match = re.search(r"tp-\d{6}", text, re.IGNORECASE)
+            match = re.search(r"tp-[a-z0-9]{4,12}", text, re.IGNORECASE)
             ref_number = match.group(0).upper() if match else "TP-849201"
+            if not user_id and not user_email:
+                return {
+                    "reply_text": f"Please sign in to your TripPilot AI account to cancel booking {ref_number}.",
+                    "action_proposal": {
+                        "action": "open_login",
+                        "parameters": {},
+                        "explanation": "Sign in to verify booking ownership.",
+                        "requires_user_confirmation": False
+                    },
+                    "suggested_followups": ["Log in to my account", "Keep my booking"]
+                }
             return {
                 "reply_text": f"I can help you cancel demo booking {ref_number}. Please confirm if you wish to proceed.",
                 "action_proposal": {
@@ -365,10 +392,21 @@ class AIService:
             }
 
         if "my booking" in text or "show bookings" in text or "upcoming trip" in text:
-            bookings = await DatabaseRepository.get_bookings()
+            if not user_id and not user_email:
+                return {
+                    "reply_text": "Please sign in to your TripPilot AI account to view and manage your travel bookings.",
+                    "action_proposal": {
+                        "action": "open_login",
+                        "parameters": {},
+                        "explanation": "Sign in to access your travel bookings.",
+                        "requires_user_confirmation": False
+                    },
+                    "suggested_followups": ["Log in to my account", "Book a trip", "Search flights"]
+                }
+            bookings = await DatabaseRepository.get_bookings_by_user(user_id=user_id or "", email=user_email or "")
             active_count = len([b for b in bookings if b.get("status") == "CONFIRMED"])
             return {
-                "reply_text": f"You currently have {active_count} active simulated bookings in your account.",
+                "reply_text": f"You currently have {active_count} active simulated booking{'s' if active_count != 1 else ''} in your account.",
                 "action_proposal": {
                     "action": "get_bookings",
                     "parameters": {},

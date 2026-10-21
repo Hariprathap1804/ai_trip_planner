@@ -55,13 +55,30 @@ class MultimodalService:
         else:
             return (True, buffer_minutes, f"Comfortable transfer buffer: {buffer_minutes}m available.")
 
+    _composed_cache: Dict[str, Dict[str, Any]] = {}
+
+    @classmethod
+    def get_composed_journey(cls, journey_id: str) -> Optional[Dict[str, Any]]:
+        return cls._composed_cache.get(journey_id)
+
     @classmethod
     def compose_multimodal_journey(cls, legs: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Composes a list of legs into a unified Journey object with validated buffers"""
+        """Composes a list of legs into a unified Journey object with validated buffers and positive fares"""
         if not legs:
             raise ValueError("At least one leg is required.")
+        if len(legs) > 8:
+            raise ValueError("A multimodal journey cannot exceed 8 legs.")
 
-        total_fare = sum(leg["fare"] for leg in legs)
+        for idx, leg in enumerate(legs):
+            leg_fare = float(leg.get("fare", 0))
+            if leg_fare < 0:
+                raise ValueError(f"Leg {idx + 1} has an invalid negative fare (₹{leg_fare}).")
+            if not leg.get("origin") or not leg.get("destination"):
+                raise ValueError(f"Leg {idx + 1} is missing origin or destination transit hub.")
+            if not leg.get("departure_time") or not leg.get("arrival_time"):
+                raise ValueError(f"Leg {idx + 1} is missing departure or arrival time.")
+
+        total_fare = round(sum(float(leg.get("fare", 0)) for leg in legs), 2)
         modes = list(dict.fromkeys(leg["mode"] for leg in legs))
         transfers_count = max(0, len(legs) - 1)
 
@@ -86,7 +103,7 @@ class MultimodalService:
 
         journey_id = f"mm_{uuid.uuid4().hex[:8]}"
 
-        return {
+        composed = {
             "id": journey_id,
             "is_multimodal": len(legs) > 1,
             "modes": modes,
@@ -103,6 +120,8 @@ class MultimodalService:
             "ai_recommendation_reason": "Custom multimodal itinerary: " + " → ".join(m.title() for m in modes),
             "warnings": warnings
         }
+        cls._composed_cache[journey_id] = composed
+        return composed
 
     @classmethod
     def find_city_hub(cls, city: str, preferred_type: str = "railway_station") -> Dict[str, Any]:

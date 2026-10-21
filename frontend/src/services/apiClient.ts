@@ -26,6 +26,24 @@ export function getFullApiUrl(path: string): URL {
   return new URL(`${window.location.origin}${API_BASE}${cleanPath}`);
 }
 
+function formatApiError(data: any, fallback: string): string {
+  if (!data) return fallback;
+  if (typeof data.detail === 'string') return data.detail;
+  if (Array.isArray(data.detail)) {
+    return data.detail
+      .map((item: any) => {
+        if (typeof item === 'string') return item;
+        const msg = (item.msg || item.message || '').replace(/^Value error,\s*/i, '');
+        const field = item.loc ? item.loc[item.loc.length - 1] : '';
+        return field ? `${field}: ${msg}` : msg;
+      })
+      .filter(Boolean)
+      .join('. ');
+  }
+  if (typeof data.message === 'string') return data.message;
+  return fallback;
+}
+
 export const apiClient = {
   async getCities(): Promise<any[]> {
     try {
@@ -85,16 +103,22 @@ export const apiClient = {
     return await res.json();
   },
 
+
   // Authentication APIs
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     const res = await fetch(getApiEndpoint('/auth/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({
+        name: credentials.name.trim(),
+        email: credentials.email.trim().toLowerCase(),
+        password: credentials.password,
+        phone: credentials.phone?.trim() || undefined,
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.detail || 'Registration failed');
+      throw new Error(formatApiError(data, 'Registration failed'));
     }
     return data;
   },
@@ -103,11 +127,14 @@ export const apiClient = {
     const res = await fetch(getApiEndpoint('/auth/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({
+        email: credentials.email.trim().toLowerCase(),
+        password: credentials.password,
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.detail || 'Invalid email or password');
+      throw new Error(formatApiError(data, 'Invalid email or password'));
     }
     return data;
   },
@@ -168,8 +195,12 @@ export const apiClient = {
   async cancelBooking(id: string): Promise<DemoBooking> {
     const res = await fetch(getApiEndpoint(`/bookings/${id}/cancel`), {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     });
-    if (!res.ok) throw new Error('Failed to cancel booking');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to cancel booking');
+    }
     return await res.json();
   },
 
@@ -184,7 +215,7 @@ export const apiClient = {
   }> {
     const res = await fetch(getApiEndpoint('/ai/chat'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
         prompt: params.prompt,
         current_search: params.current_search,

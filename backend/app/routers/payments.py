@@ -53,7 +53,7 @@ async def create_order(
         logger.error(f"Error creating Razorpay order: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create payment order: {str(e)}"
+            detail="Failed to create payment order. Please check your network connection or try again."
         )
 
 @router.post("/verify-and-book")
@@ -100,5 +100,5 @@ async def verify_and_book(
         logger.error(f"Error during verify-and-book: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Verification failed: {str(e)}"
+            detail="Payment verification failed. Please contact support or try again."
         )

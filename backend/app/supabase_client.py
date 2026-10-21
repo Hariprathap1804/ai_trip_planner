@@ -5,6 +5,7 @@ with transparent local seeded in-memory fallback.
 """
 
 import os
+import re
 import logging
 from typing import Optional, List, Dict, Any
 from app.config import settings
@@ -185,6 +186,34 @@ class DatabaseRepository:
         return None
 
     @staticmethod
+    async def get_bookings_by_user(user_id: str, email: str) -> List[Dict[str, Any]]:
+        clean_email = (email or "").strip().lower()
+        if supabase_client:
+            try:
+                # Query matching user_id first, then contact_email
+                res = supabase_client.table("bookings").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+                bookings_map = {b["id"]: DatabaseRepository._hydrate_booking(b) for b in (res.data or [])}
+                
+                if clean_email:
+                    res_email = supabase_client.table("bookings").select("*").eq("contact_email", clean_email).order("created_at", desc=True).execute()
+                    for b in (res_email.data or []):
+                        if b["id"] not in bookings_map:
+                            bookings_map[b["id"]] = DatabaseRepository._hydrate_booking(b)
+                
+                if bookings_map:
+                    return list(bookings_map.values())
+            except Exception as e:
+                logger.warning(f"Error querying user bookings from Supabase: {e}")
+                
+        # In-memory fallback
+        return [
+            DatabaseRepository._hydrate_booking(b)
+            for b in sorted(_in_memory_bookings, key=lambda x: x.get("created_at", ""), reverse=True)
+            if (b.get("user_id") and b.get("user_id") == user_id) or
+               (b.get("contact_email") and b.get("contact_email", "").strip().lower() == clean_email)
+        ]
+
+    @staticmethod
     async def save_booking(booking: Dict[str, Any]) -> Dict[str, Any]:
         _in_memory_bookings.insert(0, booking)
         if supabase_client:
@@ -192,11 +221,12 @@ class DatabaseRepository:
             combined_notes = (booking.get("notes") or "") + rzp_tag
 
             try:
-                # Prepare payload for Supabase schema with payment columns
+                # Prepare payload for Supabase schema with payment and user_id columns
                 payload = {
                     "id": booking["id"],
                     "reference_number": booking["reference_number"],
                     "status": booking["status"],
+                    "user_id": booking.get("user_id"),
                     "journey_id": booking["journey"]["id"],
                     "journey_data": booking["journey"],
                     "passengers": booking["passengers"],
@@ -212,12 +242,13 @@ class DatabaseRepository:
                 }
                 supabase_client.table("bookings").insert(payload).execute()
             except Exception as e:
-                # Fallback if remote schema does not yet have payment columns
+                # Fallback if remote schema does not yet have payment or user_id columns
                 try:
                     payload_base = {
                         "id": booking["id"],
                         "reference_number": booking["reference_number"],
                         "status": booking["status"],
+                        "user_id": booking.get("user_id"),
                         "journey_id": booking["journey"]["id"],
                         "journey_data": booking["journey"],
                         "passengers": booking["passengers"],
@@ -234,16 +265,30 @@ class DatabaseRepository:
 
     @staticmethod
     async def update_booking_status(booking_id: str, new_status: str) -> Optional[Dict[str, Any]]:
+        # Strictly sanitize booking_id to prevent PostgREST filter injection
+        clean_id = (booking_id or "").strip()
+        if not re.match(r"^[a-zA-Z0-9_\-]{3,64}$", clean_id):
+            logger.warning(f"Invalid booking_id format rejected: {clean_id}")
+            return None
+
+        clean_status = (new_status or "").strip().upper()
+        if clean_status not in ["CONFIRMED", "CANCELLED", "COMPLETED", "PENDING"]:
+            logger.warning(f"Invalid booking status rejected: {clean_status}")
+            return None
+
         target = None
         for b in _in_memory_bookings:
-            if b["id"] == booking_id or b["reference_number"] == booking_id:
-                b["status"] = new_status
+            if b["id"] == clean_id or b["reference_number"] == clean_id:
+                b["status"] = clean_status
                 target = b
                 break
         
         if supabase_client:
             try:
-                supabase_client.table("bookings").update({"status": new_status}).or_(f"id.eq.{booking_id},reference_number.eq.{booking_id}").execute()
+                # Update by id or reference_number safely without string interpolation injection
+                res = supabase_client.table("bookings").update({"status": clean_status}).eq("id", clean_id).execute()
+                if not (res.data and len(res.data) > 0):
+                    supabase_client.table("bookings").update({"status": clean_status}).eq("reference_number", clean_id).execute()
             except Exception as e:
                 logger.warning(f"Could not update booking in Supabase: {e}")
         return target

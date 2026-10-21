@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Loader2,
   Zap,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -33,11 +34,18 @@ export const AuthModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [clientError, setClientError] = useState<string | null>(null);
+
+  // Password criteria for registration
+  const hasMinLength = password.length >= 8;
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
 
   // Reset errors and fields on open / mode switch
   useEffect(() => {
     if (isAuthModalOpen) {
       clearError();
+      setClientError(null);
     }
   }, [isAuthModalOpen, authModalMode, clearError]);
 
@@ -56,14 +64,59 @@ export const AuthModal: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (authModalMode === 'login') {
-        await login({ email, password });
-      } else {
-        await register({ name, email, password, phone });
+    setClientError(null);
+    clearError();
+
+    if (authModalMode === 'login') {
+      if (!email.trim() || !password) {
+        setClientError('Please enter both email and password.');
+        return;
       }
-    } catch {
-      // Error handled in store
+      try {
+        await login({ email: email.trim(), password });
+      } catch {
+        // Error handled in store
+      }
+    } else {
+      const cleanName = name.trim();
+      if (cleanName.length < 2) {
+        setClientError('Name must be at least 2 characters long.');
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setClientError('Please enter a valid email address.');
+        return;
+      }
+      if (!hasMinLength) {
+        setClientError('Password must be at least 8 characters long.');
+        return;
+      }
+      if (!hasLetter) {
+        setClientError('Password must contain at least one letter.');
+        return;
+      }
+      if (!hasNumber) {
+        setClientError('Password must contain at least one number.');
+        return;
+      }
+      if (phone.trim()) {
+        const cleanDigits = phone.replace(/[\s\-()+]/g, '');
+        if (!/^\d{7,15}$/.test(cleanDigits)) {
+          setClientError('Please provide a valid phone number (7 to 15 digits).');
+          return;
+        }
+      }
+      try {
+        await register({
+          name: cleanName,
+          email: email.trim(),
+          password,
+          phone: phone.trim() || undefined,
+        });
+      } catch {
+        // Error handled in store
+      }
     }
   };
 
@@ -188,10 +241,10 @@ export const AuthModal: React.FC = () => {
           )}
 
           {/* Error Banner */}
-          {error && (
+          {(clientError || error) && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs animate-in fade-in duration-150">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <p className="font-medium">{error}</p>
+              <p className="font-medium">{clientError || error}</p>
             </div>
           )}
 
@@ -261,13 +314,41 @@ export const AuthModal: React.FC = () => {
                 <input
                   type="password"
                   required
-                  minLength={6}
+                  minLength={authModalMode === 'register' ? 8 : 1}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all placeholder:text-slate-400"
                 />
               </div>
+              {authModalMode === 'register' && (
+                <div className="pt-1.5 space-y-1">
+                  <div className="flex items-center gap-3 text-[11px] font-medium flex-wrap">
+                    <span
+                      className={`flex items-center gap-1 transition-colors ${
+                        hasMinLength ? 'text-emerald-600 font-semibold' : 'text-slate-400'
+                      }`}
+                    >
+                      <CheckCircle2
+                        className={`w-3.5 h-3.5 ${hasMinLength ? 'text-emerald-500' : 'text-slate-300'}`}
+                      />
+                      8+ characters
+                    </span>
+                    <span
+                      className={`flex items-center gap-1 transition-colors ${
+                        hasLetter && hasNumber ? 'text-emerald-600 font-semibold' : 'text-slate-400'
+                      }`}
+                    >
+                      <CheckCircle2
+                        className={`w-3.5 h-3.5 ${
+                          hasLetter && hasNumber ? 'text-emerald-500' : 'text-slate-300'
+                        }`}
+                      />
+                      Letters & numbers
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
