@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import journeys, multimodal, bookings, ai, metadata, payments
+from app.routers import journeys, multimodal, bookings, ai, metadata, payments, auth
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -20,6 +20,7 @@ app.add_middleware(
 )
 
 # Mount Routers
+app.include_router(auth.router)
 app.include_router(metadata.router)
 app.include_router(journeys.router)
 app.include_router(multimodal.router)

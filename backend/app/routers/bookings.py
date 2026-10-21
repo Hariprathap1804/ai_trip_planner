@@ -1,14 +1,25 @@
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
+from fastapi import APIRouter, HTTPException, Depends
+from typing import List, Dict, Any, Optional
 from app.services.booking_service import BookingService
 from app.services.journey_service import JourneyService
 from app.models.schemas import BookingCreate, BookingUpdate
+from app.routers.auth import get_current_user_required, get_current_user_optional
 
 router = APIRouter(prefix="/api/bookings", tags=["Bookings"])
 
 @router.get("")
-async def get_all_bookings() -> List[Dict[str, Any]]:
-    return await BookingService.get_all_bookings()
+async def get_all_bookings(current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)) -> List[Dict[str, Any]]:
+    all_bookings = await BookingService.get_all_bookings()
+    if current_user:
+        # Filter for user's bookings, or fallback to all demo bookings if user has none yet
+        user_id = current_user.get("id")
+        user_email = current_user.get("email", "").lower()
+        user_bookings = [
+            b for b in all_bookings 
+            if b.get("user_id") == user_id or b.get("contact_email", "").lower() == user_email
+        ]
+        return user_bookings if user_bookings else all_bookings
+    return all_bookings
 
 @router.get("/{booking_id}")
 async def get_booking(booking_id: str) -> Dict[str, Any]:
@@ -18,7 +29,11 @@ async def get_booking(booking_id: str) -> Dict[str, Any]:
     return booking
 
 @router.post("")
-async def create_booking(payload: BookingCreate) -> Dict[str, Any]:
+async def create_booking(
+    payload: BookingCreate,
+    current_user: Dict[str, Any] = Depends(get_current_user_required)
+) -> Dict[str, Any]:
+    payload.user_id = current_user["id"]
     journey_data = payload.journey.dict() if payload.journey else None
     if not journey_data and payload.journey_id:
         journey_data = await JourneyService.get_journey_by_id(payload.journey_id)

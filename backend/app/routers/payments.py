@@ -3,11 +3,12 @@ Payments Router: Razorpay Test Mode Order Creation, Public Config, and Signature
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Depends, status
 from typing import Dict, Any
 from app.services.payment_service import PaymentService
 from app.services.journey_service import JourneyService
 from app.models.schemas import PaymentOrderCreate, PaymentVerifyAndBook
+from app.routers.auth import get_current_user_required
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,12 @@ async def get_payment_config() -> Dict[str, Any]:
     return PaymentService.get_public_config()
 
 @router.post("/create-order")
-async def create_order(payload: PaymentOrderCreate) -> Dict[str, Any]:
+async def create_order(
+    payload: PaymentOrderCreate,
+    current_user: Dict[str, Any] = Depends(get_current_user_required)
+) -> Dict[str, Any]:
     """
-    Creates a Razorpay order in paise (INR).
+    Creates a Razorpay order in paise (INR). Requires authenticated user.
     Returns order_id, amount in paise, currency, and receipt ID.
     """
     if payload.amount <= 0:
@@ -34,11 +38,15 @@ async def create_order(payload: PaymentOrderCreate) -> Dict[str, Any]:
         )
 
     try:
+        notes = payload.notes or {}
+        notes["user_id"] = current_user.get("id")
+        notes["user_email"] = current_user.get("email")
+
         order = PaymentService.create_order(
             amount=payload.amount,
             currency=payload.currency,
             receipt=payload.receipt,
-            notes=payload.notes
+            notes=notes
         )
         return {"success": True, "order": order}
     except Exception as e:
@@ -49,11 +57,15 @@ async def create_order(payload: PaymentOrderCreate) -> Dict[str, Any]:
         )
 
 @router.post("/verify-and-book")
-async def verify_and_book(payload: PaymentVerifyAndBook) -> Dict[str, Any]:
+async def verify_and_book(
+    payload: PaymentVerifyAndBook,
+    current_user: Dict[str, Any] = Depends(get_current_user_required)
+) -> Dict[str, Any]:
     """
     Cryptographically verifies the Razorpay payment HMAC signature,
-    marks payment as PAID, and persists the booking.
+    marks payment as PAID, and persists the booking for the authenticated user.
     """
+    payload.booking_payload.user_id = current_user["id"]
     journey_data = payload.journey_data
     if not journey_data and payload.booking_payload.journey:
         journey_data = payload.booking_payload.journey.dict()

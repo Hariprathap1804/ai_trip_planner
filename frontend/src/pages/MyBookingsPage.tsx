@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ticket, Calendar, AlertCircle, X, Check, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Ticket, Calendar, AlertCircle, X, Check, ShieldCheck, ArrowRight, User as UserIcon, Lock } from 'lucide-react';
 import { useBookingStore } from '../store/useBookingStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { DemoBooking, BookingStatus } from '../types/booking';
 
 export const MyBookingsPage: React.FC = () => {
   const { bookings, fetchBookings, cancelBooking, isLoading } = useBookingStore();
+  const { user, isAuthenticated, openAuthModal } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'ALL' | BookingStatus>('ALL');
   const [cancellingBooking, setCancellingBooking] = useState<DemoBooking | null>(null);
 
   useEffect(() => {
     fetchBookings();
-  }, [fetchBookings]);
+  }, [fetchBookings, isAuthenticated]);
 
   const filteredBookings = bookings.filter((b) => {
     if (activeTab === 'ALL') return true;
@@ -43,6 +45,35 @@ export const MyBookingsPage: React.FC = () => {
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
+
+      {/* Auth Status Notice */}
+      {isAuthenticated && user ? (
+        <div className="p-3.5 px-4 rounded-2xl bg-indigo-50/80 border border-indigo-200/60 shadow-xs flex items-center justify-between text-xs text-indigo-950">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>
+              Showing confirmed bookings for <strong className="font-semibold text-indigo-900">{user.name}</strong> ({user.email})
+            </span>
+          </div>
+          <span className="text-[11px] font-semibold text-indigo-700 bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100">
+            Personal Account
+          </span>
+        </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/70 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900">
+          <div className="flex items-center gap-2.5">
+            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>You are viewing default demo reservations. Sign in to link and view your personal bookings.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => openAuthModal('login', 'Sign in to access your personal booking records.')}
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-all self-start sm:self-auto"
+          >
+            Sign In
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-3 text-xs font-semibold">

@@ -20,6 +20,7 @@ import {
 import { AIMessage } from '../../types/ai';
 import { useAiStore } from '../../store/useAiStore';
 import { useBookingStore } from '../../store/useBookingStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { apiClient } from '../../services/apiClient';
 import { Passenger } from '../../types/booking';
 import { loadRazorpayScript } from '../../services/razorpay';
@@ -32,6 +33,7 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
   const navigate = useNavigate();
   const { executeAction, setIsOpen } = useAiStore();
   const { setDraftJourney, verifyAndBook } = useBookingStore();
+  const { user: authUser, isAuthenticated, openAuthModal } = useAuthStore();
   const isUser = message.sender === 'user';
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -78,6 +80,13 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
 
   const handleQuickPayRazorpay = async () => {
     if (!journey) return;
+
+    // Strict Auth Gatekeeper
+    if (!isAuthenticated) {
+      openAuthModal('login', 'Please sign in or create an account to book your trip immediately with AI.');
+      return;
+    }
+
     setIsProcessingPayment(true);
     setQuickPayError(null);
 
@@ -99,14 +108,14 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
 
       const order = orderRes.order;
 
-      // Default quick traveller details
+      // Authenticated traveller details
       const defaultPassenger: Passenger = {
-        full_name: 'Rahul Nair',
+        full_name: authUser?.name || 'Rahul Nair',
         age: 31,
         gender: 'male',
         seat_preference: 'Window Seat',
-        email: 'rahul.nair@example.com',
-        phone: '+91 98450 12345',
+        email: authUser?.email || 'rahul.nair@example.com',
+        phone: authUser?.phone || '+91 98450 12345',
       };
 
       // 3. Launch authentic Razorpay Checkout modal

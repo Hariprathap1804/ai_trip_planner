@@ -3,9 +3,15 @@ import { DemoBooking, Passenger } from '../types/booking';
 import { SearchFilters, SortOption } from '../types/search';
 import { AIActionProposal } from '../types/ai';
 import { PaymentConfig, RazorpayOrder } from '../types/payment';
+import { User, AuthResponse, LoginCredentials, RegisterCredentials } from '../types/auth';
 
 const RAW_API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || '';
 const API_BASE = RAW_API_URL ? `${RAW_API_URL.replace(/\/$/, '')}/api` : '/api';
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('trippilot_auth_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 
 export function getApiEndpoint(path: string): string {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -79,14 +85,56 @@ export const apiClient = {
     return await res.json();
   },
 
+  // Authentication APIs
+  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+    const res = await fetch(getApiEndpoint('/auth/register'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || 'Registration failed');
+    }
+    return data;
+  },
+
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    const res = await fetch(getApiEndpoint('/auth/login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || 'Invalid email or password');
+    }
+    return data;
+  },
+
+  async getMe(): Promise<User> {
+    const res = await fetch(getApiEndpoint('/auth/me'), {
+      headers: { ...getAuthHeaders() },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || 'Failed to authenticate current session');
+    }
+    return data.user;
+  },
+
   async getBookings(): Promise<DemoBooking[]> {
-    const res = await fetch(getApiEndpoint('/bookings'));
+    const res = await fetch(getApiEndpoint('/bookings'), {
+      headers: { ...getAuthHeaders() },
+    });
     if (!res.ok) throw new Error('Failed to fetch bookings');
     return await res.json();
   },
 
   async getBookingById(id: string): Promise<DemoBooking> {
-    const res = await fetch(getApiEndpoint(`/bookings/${id}`));
+    const res = await fetch(getApiEndpoint(`/bookings/${id}`), {
+      headers: { ...getAuthHeaders() },
+    });
     if (!res.ok) throw new Error('Booking not found');
     return await res.json();
   },
@@ -100,7 +148,7 @@ export const apiClient = {
   }): Promise<DemoBooking> {
     const res = await fetch(getApiEndpoint('/bookings'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
         journey: payload.journey,
         journey_id: payload.journey.id,
@@ -110,7 +158,10 @@ export const apiClient = {
         notes: payload.notes,
       }),
     });
-    if (!res.ok) throw new Error('Failed to create demo booking');
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Failed to create booking');
+    }
     return await res.json();
   },
 
@@ -164,7 +215,7 @@ export const apiClient = {
   }): Promise<{ success: boolean; order: RazorpayOrder }> {
     const res = await fetch(getApiEndpoint('/payments/create-order'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({
         amount: params.amount,
         currency: params.currency || 'INR',
@@ -195,7 +246,7 @@ export const apiClient = {
   }): Promise<{ success: boolean; message: string; booking: DemoBooking }> {
     const res = await fetch(getApiEndpoint('/payments/verify-and-book'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(params),
     });
     if (!res.ok) {

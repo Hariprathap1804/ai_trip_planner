@@ -23,10 +23,16 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "")
     RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "")
     
+    # Auth Security
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "trippilot-auth-secret-key-2026-production-token")
+    TOKEN_EXPIRE_DAYS: int = int(os.getenv("TOKEN_EXPIRE_DAYS", "7"))
+    
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
     
     # CORS
     CORS_ORIGINS: List[str] = [
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
         "http://localhost:5173",

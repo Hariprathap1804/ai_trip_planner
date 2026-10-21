@@ -64,7 +64,18 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. User Preferences Table
+-- 4. Users Table (Authentication & User Profiles)
+CREATE TABLE IF NOT EXISTS public.users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    password_hash TEXT NOT NULL,
+    avatar_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 5. User Preferences Table
 CREATE TABLE IF NOT EXISTS public.user_preferences (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
     user_id TEXT NOT NULL DEFAULT 'demo_user',
@@ -79,6 +90,7 @@ CREATE TABLE IF NOT EXISTS public.user_preferences (
 ALTER TABLE public.hubs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.journeys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read on hubs" ON public.hubs;
@@ -89,6 +101,9 @@ CREATE POLICY "Allow public all on journeys" ON public.journeys FOR ALL USING (t
 
 DROP POLICY IF EXISTS "Allow public full access on bookings" ON public.bookings;
 CREATE POLICY "Allow public full access on bookings" ON public.bookings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public full access on users" ON public.users;
+CREATE POLICY "Allow public full access on users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow public full access on user_preferences" ON public.user_preferences;
 CREATE POLICY "Allow public full access on user_preferences" ON public.user_preferences FOR ALL USING (true) WITH CHECK (true);

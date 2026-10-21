@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useBookingStore } from '../store/useBookingStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { Passenger } from '../types/booking';
 import { apiClient } from '../services/apiClient';
 import { PaymentConfig, RazorpayOrder } from '../types/payment';
@@ -26,14 +27,24 @@ import { loadRazorpayScript, RAZORPAY_TEST_INFO } from '../services/razorpay';
 export const BookingReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { activeDraftJourney, createBooking, verifyAndBook, isLoading, error } = useBookingStore();
+  const { user, isAuthenticated, openAuthModal } = useAuthStore();
 
-  const [fullName, setFullName] = useState('Rahul Nair');
+  const [fullName, setFullName] = useState(user?.name || 'Rahul Nair');
   const [age, setAge] = useState<number>(31);
   const [gender, setGender] = useState<'male' | 'female' | 'other'>('male');
-  const [email, setEmail] = useState('rahul.nair@example.com');
-  const [phone, setPhone] = useState('+91 98450 12345');
+  const [email, setEmail] = useState(user?.email || 'rahul.nair@example.com');
+  const [phone, setPhone] = useState(user?.phone || '+91 98450 12345');
   const [seatPreference, setSeatPreference] = useState('Window Seat');
   const [notes, setNotes] = useState('');
+
+  // Update fields when user signs in or profile changes
+  useEffect(() => {
+    if (user) {
+      if (user.name) setFullName(user.name);
+      if (user.email) setEmail(user.email);
+      if (user.phone) setPhone(user.phone);
+    }
+  }, [user]);
 
   // Payment states
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
@@ -199,6 +210,13 @@ export const BookingReviewPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPaymentError(null);
+
+    // Strict Auth Gatekeeper
+    if (!isAuthenticated) {
+      openAuthModal('login', 'Please sign in or create an account to finalize your booking and proceed to payment.');
+      return;
+    }
+
     setIsProcessingPayment(true);
 
     const passenger: Passenger = {
@@ -282,6 +300,54 @@ export const BookingReviewPage: React.FC = () => {
             <span className="font-bold">Transaction Issue: </span>
             {paymentError}
           </div>
+        </div>
+      )}
+
+      {/* Authentication Required Warning Banner */}
+      {!isAuthenticated && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200/90 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-500 text-white shrink-0 shadow-xs">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900">Sign In Required to Complete Booking</h4>
+              <p className="text-xs text-slate-600 mt-0.5">
+                TripPilot AI requires you to sign in or create an account to issue your confirmed ticket, verify payment signatures, and save bookings to your profile.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => openAuthModal('login', 'Please sign in to proceed with booking and payment.')}
+              className="w-full sm:w-auto px-4 py-2 bg-indigo-900 hover:bg-indigo-950 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-all"
+            >
+              Sign In to Book
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthModal('register', 'Create an account to proceed with booking and payment.')}
+              className="w-full sm:w-auto px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-all"
+            >
+              Create Account
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Authenticated User Status Banner */}
+      {isAuthenticated && user && (
+        <div className="p-3.5 px-4 rounded-2xl bg-indigo-50/80 border border-indigo-200/60 shadow-xs flex items-center justify-between gap-3 text-xs text-indigo-950">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>
+              Booking as <strong className="font-semibold text-indigo-900">{user.name}</strong> ({user.email})
+            </span>
+          </div>
+          <span className="text-[11px] font-semibold text-indigo-700 bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100">
+            Authenticated Profile
+          </span>
         </div>
       )}
 
@@ -503,28 +569,39 @@ export const BookingReviewPage: React.FC = () => {
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading || isProcessingPayment}
-            className="w-full py-3.5 bg-gradient-to-r from-indigo-950 via-indigo-900 to-blue-700 hover:from-indigo-900 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-lg transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-          >
-            {isProcessingPayment || isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Processing Payment via Razorpay...</span>
-              </>
-            ) : paymentMethod === 'razorpay' ? (
-              <>
-                <CreditCard className="w-4 h-4 text-emerald-400" />
-                <span>Pay ₹{totalAmount.toLocaleString()} via Razorpay (Test)</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                <span>Confirm Simulated Booking (₹{totalAmount.toLocaleString()})</span>
-              </>
-            )}
-          </button>
+          {isAuthenticated ? (
+            <button
+              type="submit"
+              disabled={isLoading || isProcessingPayment}
+              className="w-full py-3.5 bg-gradient-to-r from-indigo-950 via-indigo-900 to-blue-700 hover:from-indigo-900 hover:to-blue-600 text-white font-bold text-xs rounded-xl shadow-lg transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+            >
+              {isProcessingPayment || isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Processing Payment via Razorpay...</span>
+                </>
+              ) : paymentMethod === 'razorpay' ? (
+                <>
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <span>Pay ₹{totalAmount.toLocaleString()} via Razorpay (Test)</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <span>Confirm Simulated Booking (₹{totalAmount.toLocaleString()})</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => openAuthModal('login', 'Please sign in or create an account to finalize your booking and proceed to payment.')}
+              className="w-full py-3.5 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs rounded-xl shadow-lg transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-2 shadow-amber-600/20 hover:scale-[1.01]"
+            >
+              <Lock className="w-4 h-4 text-amber-200" />
+              <span>Sign In to Complete Booking & Pay (₹{totalAmount.toLocaleString()})</span>
+            </button>
+          )}
         </form>
 
         {/* Selected Itinerary & Fare Breakdown */}

@@ -121,6 +121,7 @@ class DemoBooking(BaseModel):
     razorpay_order_id: Optional[str] = None
     razorpay_payment_id: Optional[str] = None
     payment_method: Optional[str] = "simulated"
+    user_id: Optional[str] = None
 
 class BookingCreate(BaseModel):
     journey_id: Optional[str] = None
@@ -129,6 +130,31 @@ class BookingCreate(BaseModel):
     contact_email: str
     contact_phone: str
     notes: Optional[str] = None
+    user_id: Optional[str] = None
+
+# User Authentication Schemas
+class UserRegister(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    email: str = Field(..., min_length=5, max_length=150)
+    password: str = Field(..., min_length=6, max_length=100)
+    phone: Optional[str] = None
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: Optional[str] = None
+    avatar_url: Optional[str] = None
+    created_at: Optional[str] = None
+
+class AuthResponse(BaseModel):
+    user: UserResponse
+    token: str
+    message: Optional[str] = "Authentication successful"
 
 class BookingUpdate(BaseModel):
     contact_email: Optional[str] = None
