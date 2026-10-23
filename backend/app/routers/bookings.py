@@ -50,12 +50,13 @@ async def create_booking(
     current_user: Dict[str, Any] = Depends(get_current_user_required)
 ) -> Dict[str, Any]:
     payload.user_id = current_user["id"]
-    journey_data = payload.journey.dict() if payload.journey else None
-    if not journey_data and payload.journey_id:
-        journey_data = await JourneyService.get_journey_by_id(payload.journey_id)
-    
+    # Resolve canonical journey strictly from verified server records by ID
+    journey_data = await JourneyService.get_journey_by_id(payload.journey_id)
     if not journey_data:
-        raise HTTPException(status_code=400, detail="Valid journey data or journey_id is required")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Journey with ID '{payload.journey_id}' was not found or is expired. Please select a valid journey."
+        )
 
     return await BookingService.create_booking(payload, journey_data)
 

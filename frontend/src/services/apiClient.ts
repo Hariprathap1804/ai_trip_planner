@@ -80,6 +80,9 @@ export const apiClient = {
       if (params.filters.max_duration_minutes) url.searchParams.set('max_duration', params.filters.max_duration_minutes.toString());
       if (params.filters.flight_direct_only) url.searchParams.set('flight_direct_only', 'true');
       if (params.filters.bus_ac_only) url.searchParams.set('bus_ac_only', 'true');
+      if (params.filters.time_of_day && params.filters.time_of_day.length > 0) {
+        params.filters.time_of_day.forEach((tod) => url.searchParams.append('time_of_day', tod));
+      }
     }
 
     const res = await fetch(url.toString());

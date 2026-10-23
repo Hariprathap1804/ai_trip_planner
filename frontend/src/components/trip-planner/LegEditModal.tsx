@@ -10,10 +10,10 @@ import {
   Check, 
   Clock, 
   IndianRupee, 
-  MapPin, 
-  Building2 
+  MapPin 
 } from 'lucide-react';
 import { JourneyLeg, TransportMode, LocationHub } from '../../types/journey';
+import { useSearchStore } from '../../store/useSearchStore';
 
 interface LegEditModalProps {
   isOpen: boolean;
@@ -233,6 +233,25 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
     e.preventDefault();
     const durationM = calculateDurationMinutes();
 
+    const baseDate = initialLeg?.departure_time?.includes('T')
+      ? initialLeg.departure_time.split('T')[0]
+      : (useSearchStore.getState().date || new Date().toISOString().split('T')[0]);
+
+    const [dh, dm] = depTime.split(':').map(Number);
+    const [ah, am] = arrTime.split(':').map(Number);
+    const isOvernight = (ah * 60 + am) < (dh * 60 + dm);
+
+    let arrDate = baseDate;
+    if (isOvernight) {
+      try {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + 1);
+        arrDate = d.toISOString().split('T')[0];
+      } catch {
+        arrDate = baseDate;
+      }
+    }
+
     const legToSave: JourneyLeg = {
       id: initialLeg ? initialLeg.id : `leg_${Date.now()}`,
       mode,
@@ -250,8 +269,8 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
         city: destCity.trim() || originCity.trim(),
         type: 'address',
       },
-      departure_time: `2026-10-13T${depTime}:00`,
-      arrival_time: `2026-10-13T${arrTime}:00`,
+      departure_time: `${baseDate}T${depTime}:00`,
+      arrival_time: `${arrDate}T${arrTime}:00`,
       duration_minutes: durationM,
       fare: Number(fare) || 100,
       class_or_category: category.trim() || 'Standard',

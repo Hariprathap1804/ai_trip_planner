@@ -66,16 +66,14 @@ async def verify_and_book(
     marks payment as PAID, and persists the booking for the authenticated user.
     """
     payload.booking_payload.user_id = current_user["id"]
-    journey_data = payload.journey_data
-    if not journey_data and payload.booking_payload.journey:
-        journey_data = payload.booking_payload.journey.dict()
-    elif not journey_data and payload.booking_payload.journey_id:
-        journey_data = await JourneyService.get_journey_by_id(payload.booking_payload.journey_id)
+    # Enforce canonical journey lookup by ID (prevent price and itinerary tampering)
+    journey_id = payload.booking_payload.journey_id
+    journey_data = await JourneyService.get_journey_by_id(journey_id)
 
     if not journey_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Valid journey information is required to finalize booking after payment."
+            detail=f"Journey with ID '{journey_id}' was not found or is expired. Booking could not be finalized."
         )
 
     try:

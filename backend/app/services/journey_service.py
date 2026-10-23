@@ -3,7 +3,7 @@ Journey Service: Filtering, Searching, and Multi-Criteria Sorting Engine
 """
 
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.supabase_client import DatabaseRepository
 from app.models.schemas import SearchFilters, SortOption
 
@@ -126,7 +126,51 @@ class JourneyService:
                     if filters.bus_ac_only and "AC" not in first_leg["class_or_category"]:
                         continue
 
-            results.append(j)
+            if date:
+                # Project schedule onto requested travel date
+                j_copy = dict(j)
+                try:
+                    orig_dep = j.get("departure_time", "")
+                    orig_arr = j.get("arrival_time", "")
+                    
+                    dep_time_part = orig_dep.split("T")[1] if "T" in orig_dep else orig_dep
+                    arr_time_part = orig_arr.split("T")[1] if "T" in orig_arr else orig_arr
+                    
+                    # Detect if original journey spanned overnight
+                    days_span = 0
+                    if "T" in orig_dep and "T" in orig_arr:
+                        d_dep = datetime.fromisoformat(orig_dep).date()
+                        d_arr = datetime.fromisoformat(orig_arr).date()
+                        days_span = max(0, (d_arr - d_dep).days)
+                    
+                    target_dep_d = datetime.strptime(date, "%Y-%m-%d").date()
+                    target_arr_d = target_dep_d + timedelta(days=days_span)
+                    
+                    j_copy["departure_time"] = f"{target_dep_d.strftime('%Y-%m-%d')}T{dep_time_part}"
+                    j_copy["arrival_time"] = f"{target_arr_d.strftime('%Y-%m-%d')}T{arr_time_part}"
+                    
+                    # Also align legs if present
+                    if j.get("legs"):
+                        projected_legs = []
+                        for leg in j["legs"]:
+                            l_copy = dict(leg)
+                            l_dep = l_copy.get("departure_time", "")
+                            l_arr = l_copy.get("arrival_time", "")
+                            l_dep_t = l_dep.split("T")[1] if "T" in l_dep else l_dep
+                            l_arr_t = l_arr.split("T")[1] if "T" in l_arr else l_arr
+                            l_span = 0
+                            if "T" in l_dep and "T" in l_arr:
+                                l_span = max(0, (datetime.fromisoformat(l_arr).date() - datetime.fromisoformat(l_dep).date()).days)
+                            l_copy["departure_time"] = f"{target_dep_d.strftime('%Y-%m-%d')}T{l_dep_t}"
+                            l_copy["arrival_time"] = f"{(target_dep_d + timedelta(days=l_span)).strftime('%Y-%m-%d')}T{l_arr_t}"
+                            projected_legs.append(l_copy)
+                        j_copy["legs"] = projected_legs
+                    
+                    results.append(j_copy)
+                except Exception:
+                    results.append(j)
+            else:
+                results.append(j)
 
         # Sorting logic
         if sort_by == "cheapest":
@@ -142,8 +186,11 @@ class JourneyService:
 
     @classmethod
     async def get_journey_by_id(cls, journey_id: str) -> Optional[Dict[str, Any]]:
+        if not journey_id:
+            return None
         all_journeys = await DatabaseRepository.get_all_journeys()
         for j in all_journeys:
-            if j["id"] == journey_id:
+            if j.get("id") == journey_id:
                 return j
-        return None
+        from app.services.multimodal_service import MultimodalService
+        return MultimodalService.get_composed_journey(journey_id)

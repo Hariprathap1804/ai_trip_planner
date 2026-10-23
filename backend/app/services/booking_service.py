@@ -33,7 +33,13 @@ class BookingService:
         ref_number = cls.generate_reference()
         now_iso = datetime.now().isoformat()
 
-        base_fare = float(journey_data.get("total_fare", 1000))
+        # Secure server-side calculation: unit journey fare * number of passengers
+        pax_count = max(1, len(payload.passengers))
+        unit_fare = float(journey_data.get("total_fare", 0))
+        if unit_fare <= 0:
+            raise ValueError("Invalid journey fare: Unit fare must be greater than zero.")
+
+        base_fare = round(unit_fare * pax_count, 2)
         taxes = round(base_fare * 0.12, 2)
         total_amount = round(base_fare + taxes, 2)
 

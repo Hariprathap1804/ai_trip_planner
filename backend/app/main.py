@@ -18,17 +18,23 @@ from fastapi.exceptions import RequestValidationError
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = exc.errors()
     messages = []
+    clean_errors = []
     for err in errors:
         msg = err.get("msg", "Validation error")
         msg = msg.removeprefix("Value error, ")
         field = err.get("loc", [])
         field_name = str(field[-1]) if field else "field"
         messages.append(f"{field_name}: {msg}")
+        clean_errors.append({
+            "field": field_name,
+            "message": msg,
+            "type": err.get("type", "validation_error")
+        })
     
     summary = ". ".join(messages)
     return JSONResponse(
         status_code=422,
-        content={"detail": summary, "errors": errors}
+        content={"detail": summary, "errors": clean_errors}
     )
 
 # OWASP Recommended Security Headers Middleware

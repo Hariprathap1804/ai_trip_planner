@@ -2,8 +2,16 @@ import React from 'react';
 import { X, SlidersHorizontal } from 'lucide-react';
 import { useSearchStore } from '../../store/useSearchStore';
 
+const TIME_SLOT_LABELS: Record<string, string> = {
+  early_morning: 'Early Morning',
+  morning: 'Morning',
+  afternoon: 'Afternoon',
+  evening: 'Evening',
+  night: 'Night',
+};
+
 export const FilterChipBar: React.FC = () => {
-  const { filters, clearFilter, resetAllFilters, results, sortBy, setSortBy } = useSearchStore();
+  const { filters, setFilters, clearFilter, resetAllFilters, results, sortBy, setSortBy } = useSearchStore();
 
   const activeChips: { key: string; label: string; onRemove: () => void }[] = [];
 
@@ -12,6 +20,16 @@ export const FilterChipBar: React.FC = () => {
       key: 'max_budget',
       label: `Under ₹${filters.max_budget.toLocaleString()}`,
       onRemove: () => clearFilter('max_budget'),
+    });
+  }
+
+  if (filters.max_duration_minutes) {
+    const hours = Math.floor(filters.max_duration_minutes / 60);
+    const mins = filters.max_duration_minutes % 60;
+    activeChips.push({
+      key: 'max_duration',
+      label: `Under ${hours > 0 ? `${hours}h ` : ''}${mins > 0 ? `${mins}m` : ''}`.trim(),
+      onRemove: () => clearFilter('max_duration_minutes'),
     });
   }
 
@@ -28,6 +46,24 @@ export const FilterChipBar: React.FC = () => {
       key: 'bus_ac',
       label: 'AC Bus Only',
       onRemove: () => clearFilter('bus_ac_only'),
+    });
+  }
+
+  if (filters.time_of_day && filters.time_of_day.length > 0) {
+    filters.time_of_day.forEach((slot) => {
+      const slotName = TIME_SLOT_LABELS[slot] || slot.replace('_', ' ');
+      activeChips.push({
+        key: `time_${slot}`,
+        label: `Dep: ${slotName}`,
+        onRemove: () => {
+          const next = filters.time_of_day?.filter((s) => s !== slot);
+          if (!next || next.length === 0) {
+            clearFilter('time_of_day');
+          } else {
+            setFilters({ time_of_day: next });
+          }
+        },
+      });
     });
   }
 

@@ -23,18 +23,18 @@ The audit identified significant input validation gaps across the booking lifecy
 
 ## 2. Vulnerability Severity Matrix
 
-| Finding ID | Severity | Category | Vulnerability Summary | Confirmed in Code |
+| Finding ID | Severity | Category | Vulnerability Summary | Status |
 | :---: | :---: | :--- | :--- | :---: |
-| **VAL-01** | 🔴 **Critical** | Business Logic / Tampering | Client-supplied journey fare tampering allows booking trips for ₹1.00 | **YES (Live Exploit Verified)** |
-| **VAL-02** | 🟠 **High** | Data Integrity & Types | Passenger model allows 0 passengers, negative ages, and invalid contact data | **YES (Live Exploit Verified)** |
-| **VAL-03** | 🟠 **High** | Missing Schema Validation | `POST /api/multimodal/plan` accepts raw untyped dictionaries with negative fares | **YES (Live Exploit Verified)** |
-| **VAL-04** | 🟠 **High** | Resource Exhaustion (DoS) | `AIRequest.prompt` has no length restriction, exposing Groq API to token exhaustion | **YES** |
-| **VAL-05** | 🟡 **Medium** | Range & Logic Inconsistency | Search filters accept negative budgets, inverted ranges, and arbitrary sort strings | **YES (Live Exploit Verified)** |
-| **VAL-06** | 🟡 **Medium** | Missing Constraints | Authentication models omit phone validation and password maximum length constraints | **YES** |
-| **VAL-07** | 🟡 **Medium** | Information Disclosure | AI conversational handler queries global database bookings instead of user-scoped records | **YES** |
-| **VAL-08** | 🟡 **Medium** | Identifier Validation | Booking update and retrieval endpoints accept unvalidated string identifiers | **YES** |
-| **VAL-09** | 🟢 **Low** | Client-Side Gaps | Frontend datepicker permits past dates and form lacks pre-submission regex validation | **YES** |
-| **VAL-10** | 🟢 **Low** | Architecture Observation | File uploads not supported; zero path traversal risk in current surface | **YES (N/A)** |
+| **VAL-01** | 🔴 **Critical** | Business Logic / Tampering | Client-supplied journey fare tampering allows booking trips for ₹1.00 | ✅ **RESOLVED** (Canonical server lookup enforced) |
+| **VAL-02** | 🟠 **High** | Data Integrity & Types | Passenger model allows 0 passengers, negative ages, and invalid contact data | ✅ **RESOLVED** (Pydantic bounds & regex validators added) |
+| **VAL-03** | 🟠 **High** | Missing Schema Validation | `POST /api/multimodal/plan` accepts raw untyped dictionaries with negative fares | ✅ **RESOLVED** (Typed `List[JourneyLeg]` & positive fare check) |
+| **VAL-04** | 🟠 **High** | Resource Exhaustion (DoS) | `AIRequest.prompt` has no length restriction, exposing Groq API to token exhaustion | ⏳ **PENDING (Phase 2)** |
+| **VAL-05** | 🟡 **Medium** | Range & Logic Inconsistency | Search filters accept negative budgets, inverted ranges, and arbitrary sort strings | ⏳ **PENDING (Phase 2)** |
+| **VAL-06** | 🟡 **Medium** | Missing Constraints | Authentication models omit phone validation and password maximum length constraints | ⏳ **PENDING (Phase 2)** |
+| **VAL-07** | 🟡 **Medium** | Information Disclosure | AI conversational handler queries global database bookings instead of user-scoped records | ⏳ **PENDING (Phase 2)** |
+| **VAL-08** | 🟡 **Medium** | Identifier Validation | Booking update and retrieval endpoints accept unvalidated string identifiers | ⏳ **PENDING (Phase 3)** |
+| **VAL-09** | 🟢 **Low** | Client-Side Gaps | Frontend datepicker permits past dates and form lacks pre-submission regex validation | ⏳ **PENDING (Phase 3)** |
+| **VAL-10** | 🟢 **Low** | Architecture Observation | File uploads not supported; zero path traversal risk in current surface | ✅ **VERIFIED (N/A)** |
 
 ---
 
@@ -338,25 +338,18 @@ The audit identified significant input validation gaps across the booking lifecy
 
 ---
 
-## 4. Remediation Roadmap
+## 4. Remediation Roadmap & Implementation Progress
 
-To remediate these findings systematically, the following phased approach is recommended:
-
-- [x] **Phase 1 (Critical & High — Data Integrity & Fares):**
-  - Make `journey_id` mandatory in `BookingCreate` and `PaymentVerifyAndBook`; resolve fares and itineraries strictly server-side.
-  - Implement Pydantic field validators and regex checks on `Passenger` and `BookingCreate` (full name, age 1–120, email format, phone format, passenger count 1–9).
-  - Convert `POST /api/multimodal/plan` to accept typed `List[JourneyLeg]`.
-- [x] **Phase 2 (Medium — Search, Auth & AI Guards):**
+- [x] **Phase 1 (Critical & High — Data Integrity & Fares) [COMPLETED & VERIFIED]:**
+  - ✅ Make `journey_id` mandatory in `BookingCreate` and `PaymentVerifyAndBook`; resolve fares and itineraries strictly server-side from canonical database records.
+  - ✅ Implement Pydantic field validators and regex checks on `Passenger` and `BookingCreate` (full name min 2 chars, age 1–120, email format regex, phone digits 7–15, passenger count 1–9).
+  - ✅ Convert `POST /api/multimodal/plan` to accept typed `List[JourneyLeg]`, reject negative fares, and register composed journeys in memory cache for canonical lookup.
+- [ ] **Phase 2 (Medium — Search, Auth & AI Guards) [NEXT]:**
   - Add query constraints to `GET /api/journeys/search` (positive budget ranges, `SortOption` enum, date format).
   - Add length limits to `AIRequest.prompt` (max 1,000 characters) and rate limit `/api/ai/chat`.
   - Pass user identity to `AIService` to prevent multi-tenant booking leakage.
   - Enforce phone and character validation on user authentication schemas.
-- [x] **Phase 3 (Frontend Polish & Path Boundaries):**
+- [ ] **Phase 3 (Frontend Polish & Path Boundaries):**
   - Add `min` date constraint to `UnifiedSearchWidget.tsx`.
   - Add client-side regex feedback on `BookingReviewPage.tsx`.
   - Enforce regex path constraints on all `booking_id` route parameters.
-
----
-
-> [!NOTE]
-> **Status:** All Phase 1, Phase 2, and Phase 3 input validation and security remediations have been successfully implemented, unit tested, and verified end-to-end.

@@ -15,6 +15,7 @@ async def search_journeys(
     min_budget: Optional[float] = Query(None, ge=0, le=100000, description="Minimum fare in INR"),
     max_budget: Optional[float] = Query(None, ge=0, le=100000, description="Maximum fare in INR"),
     max_duration: Optional[int] = Query(None, ge=15, le=2880, description="Maximum duration in minutes"),
+    time_of_day: Optional[List[str]] = Query(None, description="Filter by departure time slots e.g. early_morning, morning, afternoon, evening"),
     flight_direct_only: Optional[bool] = Query(None),
     bus_ac_only: Optional[bool] = Query(None),
     sort_by: Optional[SortOption] = Query("recommended", description="Sorting option")
@@ -32,6 +33,7 @@ async def search_journeys(
         min_budget=min_budget,
         max_budget=max_budget,
         max_duration_minutes=max_duration,
+        time_of_day=time_of_day,
         flight_direct_only=flight_direct_only,
         bus_ac_only=bus_ac_only
     )

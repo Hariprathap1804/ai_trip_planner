@@ -161,8 +161,10 @@ class PaymentService:
         if not is_valid:
             raise ValueError("Invalid Razorpay payment signature. Transaction could not be verified.")
 
-        # Fare amount integrity verification
-        base_fare = float(journey_data.get("total_fare", 0))
+        # Fare amount integrity verification against canonical journey data
+        pax_count = max(1, len(booking_payload.passengers))
+        unit_fare = float(journey_data.get("total_fare", 0))
+        base_fare = round(unit_fare * pax_count, 2)
         taxes = round(base_fare * 0.12, 2)
         total_fare_due = round(base_fare + taxes, 2)
         if total_fare_due <= 0:

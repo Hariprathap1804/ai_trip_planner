@@ -3,7 +3,7 @@ Multimodal Service: Chaining Legs, Transfer Buffers, and Compatibility Validatio
 """
 
 from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 MIN_BUFFERS = {
@@ -17,18 +17,22 @@ MIN_BUFFERS = {
 
 class MultimodalService:
 
-    @staticmethod
-    def parse_time_minutes(time_str: str) -> int:
-        """Parses ISO timestamp or HH:MM into minutes from midnight"""
+    @classmethod
+    def parse_datetime(cls, time_str: str, default_date: str = "") -> datetime:
+        """Parses ISO timestamp (YYYY-MM-DDTHH:MM:SS) or HH:MM into a datetime object"""
+        if not time_str:
+            return datetime.now()
         try:
             if "T" in time_str:
-                time_part = time_str.split("T")[1]
-            else:
-                time_part = time_str
-            parts = time_part.split(":")
-            return int(parts[0]) * 60 + int(parts[1])
+                return datetime.fromisoformat(time_str)
+            base_date = default_date or datetime.now().strftime("%Y-%m-%d")
+            parts = time_str.split(":")
+            h, m = int(parts[0]), int(parts[1])
+            s = int(parts[2]) if len(parts) > 2 else 0
+            d_parts = list(map(int, base_date.split("-")))
+            return datetime(d_parts[0], d_parts[1], d_parts[2], h, m, s)
         except Exception:
-            return 0
+            return datetime.now()
 
     @classmethod
     def validate_connection(cls, leg_a: Dict[str, Any], leg_b: Dict[str, Any]) -> Tuple[bool, int, str]:
@@ -36,20 +40,15 @@ class MultimodalService:
         Validates connection between leg_a arrival and leg_b departure.
         Returns: (is_valid, buffer_minutes, warning_message)
         """
-        arr_m = cls.parse_time_minutes(leg_a["arrival_time"])
-        dep_m = cls.parse_time_minutes(leg_b["departure_time"])
-        
-        # Calculate buffer in minutes
-        buffer_minutes = dep_m - arr_m
-        if buffer_minutes < 0:
-            # Check if next leg is next day
-            buffer_minutes += 24 * 60
+        dt_a = cls.parse_datetime(leg_a.get("arrival_time", ""))
+        dt_b = cls.parse_datetime(leg_b.get("departure_time", ""))
 
-        next_mode = leg_b["mode"]
+        buffer_minutes = int((dt_b - dt_a).total_seconds() / 60)
+        next_mode = leg_b.get("mode", "cab")
         min_required = MIN_BUFFERS.get(next_mode, 15)
 
         if buffer_minutes < 0:
-            return (False, buffer_minutes, f"Impossible connection: Leg departs before previous leg arrives.")
+            return (False, buffer_minutes, f"Impossible connection: Leg departs {abs(buffer_minutes)}m before previous leg arrives.")
         elif buffer_minutes < min_required:
             return (True, buffer_minutes, f"Tight transfer: Only {buffer_minutes}m buffer (Recommended min: {min_required}m for {next_mode}).")
         else:
@@ -95,11 +94,9 @@ class MultimodalService:
         last_leg = legs[-1]
         
         # Calculate total journey duration including transfer buffers
-        start_m = cls.parse_time_minutes(first_leg["departure_time"])
-        end_m = cls.parse_time_minutes(last_leg["arrival_time"])
-        total_duration = end_m - start_m
-        if total_duration <= 0:
-            total_duration += 24 * 60
+        start_dt = cls.parse_datetime(first_leg.get("departure_time", ""))
+        end_dt = cls.parse_datetime(last_leg.get("arrival_time", ""))
+        total_duration = max(1, int((end_dt - start_dt).total_seconds() / 60))
 
         journey_id = f"mm_{uuid.uuid4().hex[:8]}"
 
@@ -153,16 +150,25 @@ class MultimodalService:
         destination: str = "Chennai",
         requested_modes: Optional[List[str]] = None,
         departure_time: str = "06:00",
-        date_str: str = "2026-10-13",
+        date_str: Optional[str] = None,
         max_budget: Optional[float] = None
     ) -> List[Dict[str, Any]]:
         """
         Dynamically constructs a 3-leg door-to-door multimodal itinerary based on user preferences.
         """
+        active_date = date_str or datetime.now().strftime("%Y-%m-%d")
+
         def format_iso(minutes: int) -> str:
-            h = (minutes // 60) % 24
-            m = minutes % 60
-            return f"{date_str}T{h:02d}:{m:02d}:00"
+            days_offset = minutes // 1440
+            rem_min = minutes % 1440
+            h = rem_min // 60
+            m = rem_min % 60
+            try:
+                base_dt = datetime.strptime(active_date, "%Y-%m-%d") + timedelta(days=days_offset)
+                date_prefix = base_dt.strftime("%Y-%m-%d")
+            except Exception:
+                date_prefix = active_date
+            return f"{date_prefix}T{h:02d}:{m:02d}:00"
 
         req_modes = [m.lower() for m in (requested_modes or [])]
         

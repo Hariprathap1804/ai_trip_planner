@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plane, Train, Bus, Car, Navigation, Sparkles, PlusCircle } from 'lucide-react';
+import { Plane, Train, Bus, Sparkles, PlusCircle } from 'lucide-react';
 import { JourneyLeg } from '../../types/journey';
 
 export interface PresetTemplate {
@@ -10,6 +10,19 @@ export interface PresetTemplate {
   badge: string;
   legs: JourneyLeg[];
 }
+
+const getTodayIso = (daysOffset = 0): string => {
+  try {
+    const d = new Date();
+    d.setDate(d.getDate() + daysOffset);
+    return d.toISOString().split('T')[0];
+  } catch {
+    return '2026-10-23';
+  }
+};
+
+const BASE_D = getTodayIso(0);
+const NEXT_D = getTodayIso(1);
 
 export const MULTIMODAL_PRESETS: PresetTemplate[] = [
   {
@@ -26,8 +39,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: 'Ride #1',
         origin: { id: 'addr_1', name: 'Home / Indiranagar', city: 'Bengaluru', type: 'address' },
         destination: { id: 'blr_airport', name: 'Kempegowda International Airport (BLR)', city: 'Bengaluru', type: 'airport' },
-        departure_time: '2026-10-13T06:00:00',
-        arrival_time: '2026-10-13T07:00:00',
+        departure_time: `${BASE_D}T06:00:00`,
+        arrival_time: `${BASE_D}T07:00:00`,
         duration_minutes: 60,
         fare: 950,
         class_or_category: 'Sedan (4 Seater)',
@@ -41,8 +54,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: '6E-243',
         origin: { id: 'blr_airport', name: 'Kempegowda International Airport (BLR)', city: 'Bengaluru', type: 'airport' },
         destination: { id: 'maa_airport', name: 'Chennai International Airport (MAA)', city: 'Chennai', type: 'airport' },
-        departure_time: '2026-10-13T08:45:00',
-        arrival_time: '2026-10-13T09:45:00',
+        departure_time: `${BASE_D}T08:45:00`,
+        arrival_time: `${BASE_D}T09:45:00`,
         duration_minutes: 60,
         fare: 3250,
         class_or_category: 'Economy (7kg cabin)',
@@ -56,8 +69,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: 'Ride #2',
         origin: { id: 'maa_airport', name: 'Chennai International Airport (MAA)', city: 'Chennai', type: 'airport' },
         destination: { id: 'addr_2', name: 'T. Nagar Business District', city: 'Chennai', type: 'address' },
-        departure_time: '2026-10-13T10:15:00',
-        arrival_time: '2026-10-13T10:50:00',
+        departure_time: `${BASE_D}T10:15:00`,
+        arrival_time: `${BASE_D}T10:50:00`,
         duration_minutes: 35,
         fare: 450,
         class_or_category: 'Prime Sedan',
@@ -80,8 +93,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: 'Auto #1',
         origin: { id: 'addr_blr', name: 'Home / Koramangala', city: 'Bengaluru', type: 'address' },
         destination: { id: 'blr_rail', name: 'KSR Bengaluru City Junction (SBC)', city: 'Bengaluru', type: 'railway_station' },
-        departure_time: '2026-10-13T04:45:00',
-        arrival_time: '2026-10-13T05:15:00',
+        departure_time: `${BASE_D}T04:45:00`,
+        arrival_time: `${BASE_D}T05:15:00`,
         duration_minutes: 30,
         fare: 150,
         class_or_category: 'Auto 3-Wheeler',
@@ -95,8 +108,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: '20608',
         origin: { id: 'blr_rail', name: 'KSR Bengaluru City Junction (SBC)', city: 'Bengaluru', type: 'railway_station' },
         destination: { id: 'maa_rail', name: 'Puratchi Thalaivar Dr. MGR Central (MAS)', city: 'Chennai', type: 'railway_station' },
-        departure_time: '2026-10-13T05:45:00',
-        arrival_time: '2026-10-13T10:10:00',
+        departure_time: `${BASE_D}T05:45:00`,
+        arrival_time: `${BASE_D}T10:10:00`,
         duration_minutes: 265,
         fare: 995,
         class_or_category: 'AC Chair Car (CC)',
@@ -110,8 +123,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: 'Blue Line Line 1',
         origin: { id: 'maa_metro', name: 'Central Metro Station', city: 'Chennai', type: 'metro_station' },
         destination: { id: 'maa_dest', name: 'Guindy Tech Park', city: 'Chennai', type: 'landmark' },
-        departure_time: '2026-10-13T10:30:00',
-        arrival_time: '2026-10-13T10:55:00',
+        departure_time: `${BASE_D}T10:30:00`,
+        arrival_time: `${BASE_D}T10:55:00`,
         duration_minutes: 25,
         fare: 40,
         class_or_category: 'Smart Token / QR',
@@ -134,8 +147,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: 'Purple Line',
         origin: { id: 'blr_m1', name: 'Indiranagar Metro Station', city: 'Bengaluru', type: 'metro_station' },
         destination: { id: 'blr_m2', name: 'Kempegowda Majestic Metro', city: 'Bengaluru', type: 'metro_station' },
-        departure_time: '2026-10-13T20:00:00',
-        arrival_time: '2026-10-13T20:25:00',
+        departure_time: `${BASE_D}T20:00:00`,
+        arrival_time: `${BASE_D}T20:25:00`,
         duration_minutes: 25,
         fare: 35,
         class_or_category: 'Standard Metro',
@@ -149,8 +162,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: 'KA-01-F-8821',
         origin: { id: 'blr_bus', name: 'Kempegowda Bus Station (Majestic)', city: 'Bengaluru', type: 'bus_terminal' },
         destination: { id: 'hyd_bus', name: 'Mahatma Gandhi Bus Station (MGBS)', city: 'Hyderabad', type: 'bus_terminal' },
-        departure_time: '2026-10-13T21:00:00',
-        arrival_time: '2026-10-14T06:30:00',
+        departure_time: `${BASE_D}T21:00:00`,
+        arrival_time: `${NEXT_D}T06:30:00`,
         duration_minutes: 570,
         fare: 1150,
         class_or_category: 'Volvo AC Multi-Axle Sleeper',
@@ -164,8 +177,8 @@ export const MULTIMODAL_PRESETS: PresetTemplate[] = [
         service_number: 'Auto #2',
         origin: { id: 'hyd_bus', name: 'MGBS Bus Stand', city: 'Hyderabad', type: 'bus_terminal' },
         destination: { id: 'hyd_hitec', name: 'HITEC City Cyber Towers', city: 'Hyderabad', type: 'landmark' },
-        departure_time: '2026-10-14T06:50:00',
-        arrival_time: '2026-10-14T07:25:00',
+        departure_time: `${NEXT_D}T06:50:00`,
+        arrival_time: `${NEXT_D}T07:25:00`,
         duration_minutes: 35,
         fare: 160,
         class_or_category: 'Standard Auto',

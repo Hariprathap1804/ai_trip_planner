@@ -170,12 +170,14 @@ def build_journey_from_item(item: Dict[str, Any], mode: str) -> Dict[str, Any]:
     if ":" in dep_time_raw:
         dep_dt = f"{today_str}T{dep_time_raw}:00"
         dur = item.get("dur", 60)
-        # calculate arrival time
+        # calculate arrival time with overnight day roll-over
         dep_h, dep_m = map(int, dep_time_raw.split(":"))
         arr_total_m = dep_h * 60 + dep_m + dur
+        days_offset = arr_total_m // 1440
         arr_h = (arr_total_m // 60) % 24
         arr_m = arr_total_m % 60
-        arr_dt = f"{today_str}T{arr_h:02d}:{arr_m:02d}:00"
+        arr_date = (datetime.strptime(today_str, "%Y-%m-%d") + timedelta(days=days_offset)).strftime("%Y-%m-%d")
+        arr_dt = f"{arr_date}T{arr_h:02d}:{arr_m:02d}:00"
     else:
         dep_dt = f"{today_str}T09:00:00"
         arr_dt = f"{today_str}T09:45:00"

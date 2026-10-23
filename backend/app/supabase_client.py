@@ -173,45 +173,65 @@ class DatabaseRepository:
 
     @staticmethod
     async def get_booking_by_id(booking_id: str) -> Optional[Dict[str, Any]]:
+        clean_id = (booking_id or "").strip()
+        if not clean_id:
+            return None
+            
         if supabase_client:
             try:
-                res = supabase_client.table("bookings").select("*").eq("id", booking_id).execute()
+                res = supabase_client.table("bookings").select("*").eq("id", clean_id).execute()
                 if res.data and len(res.data) > 0:
                     return DatabaseRepository._hydrate_booking(res.data[0])
+                # Secondary lookup by reference_number if primary id lookup returned no row
+                res_ref = supabase_client.table("bookings").select("*").eq("reference_number", clean_id).execute()
+                if res_ref.data and len(res_ref.data) > 0:
+                    return DatabaseRepository._hydrate_booking(res_ref.data[0])
             except Exception as e:
-                logger.warning(f"Error querying booking by id from Supabase: {e}")
+                logger.warning(f"Error querying booking by id/reference from Supabase: {e}")
         for b in _in_memory_bookings:
-            if b["id"] == booking_id or b["reference_number"] == booking_id:
+            if b["id"] == clean_id or b["reference_number"] == clean_id:
                 return DatabaseRepository._hydrate_booking(b)
         return None
 
     @staticmethod
     async def get_bookings_by_user(user_id: str, email: str) -> List[Dict[str, Any]]:
         clean_email = (email or "").strip().lower()
+        bookings_map: Dict[str, Any] = {}
         if supabase_client:
-            try:
-                # Query matching user_id first, then contact_email
-                res = supabase_client.table("bookings").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
-                bookings_map = {b["id"]: DatabaseRepository._hydrate_booking(b) for b in (res.data or [])}
-                
-                if clean_email:
+            # 1. Attempt query matching user_id if provided
+            if user_id:
+                try:
+                    res = supabase_client.table("bookings").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+                    for b in (res.data or []):
+                        bookings_map[b["id"]] = DatabaseRepository._hydrate_booking(b)
+                except Exception as e:
+                    logger.warning(f"Error querying user bookings by user_id from Supabase: {e}")
+            
+            # 2. Attempt query matching contact_email in separate try-block so missing user_id column doesn't abort email query
+            if clean_email:
+                try:
                     res_email = supabase_client.table("bookings").select("*").eq("contact_email", clean_email).order("created_at", desc=True).execute()
                     for b in (res_email.data or []):
                         if b["id"] not in bookings_map:
                             bookings_map[b["id"]] = DatabaseRepository._hydrate_booking(b)
+                except Exception as e:
+                    logger.warning(f"Error querying user bookings by email from Supabase: {e}")
+            
+            if bookings_map:
+                return list(bookings_map.values())
                 
-                if bookings_map:
-                    return list(bookings_map.values())
-            except Exception as e:
-                logger.warning(f"Error querying user bookings from Supabase: {e}")
-                
-        # In-memory fallback
-        return [
+        # In-memory fallback and merge
+        in_memory = [
             DatabaseRepository._hydrate_booking(b)
             for b in sorted(_in_memory_bookings, key=lambda x: x.get("created_at", ""), reverse=True)
             if (b.get("user_id") and b.get("user_id") == user_id) or
                (b.get("contact_email") and b.get("contact_email", "").strip().lower() == clean_email)
         ]
+        for b in in_memory:
+            if b["id"] not in bookings_map:
+                bookings_map[b["id"]] = b
+
+        return list(bookings_map.values())
 
     @staticmethod
     async def save_booking(booking: Dict[str, Any]) -> Dict[str, Any]:
@@ -221,7 +241,7 @@ class DatabaseRepository:
             combined_notes = (booking.get("notes") or "") + rzp_tag
 
             try:
-                # Prepare payload for Supabase schema with payment and user_id columns
+                # Prepare payload for full Supabase schema with payment and user_id columns
                 payload = {
                     "id": booking["id"],
                     "reference_number": booking["reference_number"],
@@ -242,13 +262,13 @@ class DatabaseRepository:
                 }
                 supabase_client.table("bookings").insert(payload).execute()
             except Exception as e:
+                logger.warning(f"Full booking payload failed, attempting legacy schema fallback: {e}")
                 # Fallback if remote schema does not yet have payment or user_id columns
                 try:
                     payload_base = {
                         "id": booking["id"],
                         "reference_number": booking["reference_number"],
                         "status": booking["status"],
-                        "user_id": booking.get("user_id"),
                         "journey_id": booking["journey"]["id"],
                         "journey_data": booking["journey"],
                         "passengers": booking["passengers"],
@@ -260,7 +280,7 @@ class DatabaseRepository:
                     }
                     supabase_client.table("bookings").insert(payload_base).execute()
                 except Exception as inner_e:
-                    logger.warning(f"Could not persist booking to Supabase: {inner_e}")
+                    logger.warning(f"Could not persist booking to Supabase even with base schema: {inner_e}")
         return booking
 
     @staticmethod
