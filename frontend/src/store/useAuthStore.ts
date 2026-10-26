@@ -77,7 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         authModalReason: null,
       });
     } catch (err: any) {
-      set({ error: err.message || 'Login failed', isLoading: false });
+      set({ error: err.message || 'Unable to sign in. Please check your email and password.', isLoading: false });
       throw err;
     }
   },
@@ -97,7 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         authModalReason: null,
       });
     } catch (err: any) {
-      set({ error: err.message || 'Registration failed', isLoading: false });
+      set({ error: err.message || 'Unable to create your account. Please check your details and try again.', isLoading: false });
       throw err;
     }
   },

@@ -48,11 +48,11 @@ class MultimodalService:
         min_required = MIN_BUFFERS.get(next_mode, 15)
 
         if buffer_minutes < 0:
-            return (False, buffer_minutes, f"Impossible connection: Leg departs {abs(buffer_minutes)}m before previous leg arrives.")
+            return (False, buffer_minutes, f"Insufficient connection time: Next leg departs {abs(buffer_minutes)}m before previous leg arrives. Please adjust scheduled departure.")
         elif buffer_minutes < min_required:
-            return (True, buffer_minutes, f"Tight transfer: Only {buffer_minutes}m buffer (Recommended min: {min_required}m for {next_mode}).")
+            return (True, buffer_minutes, f"Tight transfer window: Only {buffer_minutes}m buffer available (minimum recommended: {min_required}m for {next_mode}).")
         else:
-            return (True, buffer_minutes, f"Comfortable transfer buffer: {buffer_minutes}m available.")
+            return (True, buffer_minutes, f"Comfortable connection buffer: {buffer_minutes}m available to change vehicles.")
 
     _composed_cache: Dict[str, Dict[str, Any]] = {}
 
@@ -64,18 +64,18 @@ class MultimodalService:
     def compose_multimodal_journey(cls, legs: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Composes a list of legs into a unified Journey object with validated buffers and positive fares"""
         if not legs:
-            raise ValueError("At least one leg is required.")
+            raise ValueError("At least one transportation leg is required.")
         if len(legs) > 8:
-            raise ValueError("A multimodal journey cannot exceed 8 legs.")
+            raise ValueError("A multimodal journey cannot exceed 8 transportation legs.")
 
         for idx, leg in enumerate(legs):
             leg_fare = float(leg.get("fare", 0))
             if leg_fare < 0:
                 raise ValueError(f"Leg {idx + 1} has an invalid negative fare (₹{leg_fare}).")
             if not leg.get("origin") or not leg.get("destination"):
-                raise ValueError(f"Leg {idx + 1} is missing origin or destination transit hub.")
+                raise ValueError(f"Leg {idx + 1} is missing an origin or destination transit hub.")
             if not leg.get("departure_time") or not leg.get("arrival_time"):
-                raise ValueError(f"Leg {idx + 1} is missing departure or arrival time.")
+                raise ValueError(f"Leg {idx + 1} is missing a scheduled departure or arrival time.")
 
         total_fare = round(sum(float(leg.get("fare", 0)) for leg in legs), 2)
         modes = list(dict.fromkeys(leg["mode"] for leg in legs))
@@ -114,7 +114,7 @@ class MultimodalService:
             "transfers_count": transfers_count,
             "transfer_buffer_minutes": total_buffer,
             "recommended_score": 90 if not warnings else 75,
-            "ai_recommendation_reason": "Custom multimodal itinerary: " + " → ".join(m.title() for m in modes),
+            "ai_recommendation_reason": "Connected multimodal journey: " + " → ".join(m.title() for m in modes),
             "warnings": warnings
         }
         cls._composed_cache[journey_id] = composed

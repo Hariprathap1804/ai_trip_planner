@@ -37,8 +37,8 @@ export const AIAssistantDrawer: React.FC = () => {
   const sampleSuggestions = [
     'Find cheapest train from Bengaluru to Chennai tomorrow',
     'Show direct flights under ₹6,000',
-    'Arrive before 10 AM',
-    'Plan a trip with a train and cab',
+    'Arrive in Chennai before 10:00 AM',
+    'Plan a door-to-door trip combining train and cab',
   ];
 
   return (
@@ -58,10 +58,10 @@ export const AIAssistantDrawer: React.FC = () => {
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="font-bold text-sm text-slate-900">TripPilot AI Assistant</h2>
+                <h2 className="font-bold text-sm text-slate-900">TripPilot AI Travel Companion</h2>
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>State-Synchronized Copilot</span>
+                  <span>Online • Ready to assist with your journey</span>
                 </div>
               </div>
             </div>
@@ -71,6 +71,7 @@ export const AIAssistantDrawer: React.FC = () => {
                 type="button"
                 onClick={clearHistory}
                 title="Clear conversation"
+                aria-label="Clear conversation history"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
@@ -79,6 +80,7 @@ export const AIAssistantDrawer: React.FC = () => {
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                aria-label="Close AI Assistant drawer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -94,7 +96,7 @@ export const AIAssistantDrawer: React.FC = () => {
             {isThinking && (
               <div className="flex items-center gap-2 text-xs text-slate-500 italic p-3 bg-white rounded-2xl border border-slate-200 w-fit">
                 <Sparkles className="w-3.5 h-3.5 text-violet-600 animate-spin" />
-                <span>TripPilot AI is formulating recommendations...</span>
+                <span>Searching travel options and preparing recommendations...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -103,7 +105,7 @@ export const AIAssistantDrawer: React.FC = () => {
           {/* Quick suggestions pills */}
           <div className="p-3 bg-white border-t border-slate-100 overflow-x-auto">
             <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Suggested Questions:
+              Suggested Travel Prompts:
             </div>
             <div className="flex gap-1.5">
               {sampleSuggestions.map((s, idx) => (
@@ -126,22 +128,23 @@ export const AIAssistantDrawer: React.FC = () => {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask e.g. 'Show direct flights under ₹5,000'..."
+                placeholder="Ask e.g. 'Cheapest morning train to Chennai' or 'Plan train + cab'..."
                 className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-600/20 focus:border-violet-600 transition-all"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || isThinking}
+                aria-label="Send message to AI Assistant"
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-indigo-950 hover:bg-indigo-900 disabled:opacity-40 text-white rounded-lg flex items-center justify-center transition-colors cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="mt-2 text-[10px] text-slate-400 flex items-center justify-between">
-              <span>AI directly applies filters and plans journeys</span>
+              <span>AI helps you search routes, apply filters, and plan multimodal journeys</span>
               <span className="flex items-center gap-1 font-mono">
                 <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                Grounded in prototype data
+                Verified schedule & fare data
               </span>
             </div>
           </form>

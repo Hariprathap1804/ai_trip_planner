@@ -1,12 +1,12 @@
 import React from 'react';
-import { X, SlidersHorizontal } from 'lucide-react';
+import { X, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useSearchStore } from '../../store/useSearchStore';
 
 const TIME_SLOT_LABELS: Record<string, string> = {
-  early_morning: 'Early Morning',
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
+  early_morning: 'Early Morning (4–8 AM)',
+  morning: 'Morning (8–12 PM)',
+  afternoon: 'Afternoon (12–5 PM)',
+  evening: 'Evening & Night (5 PM+)',
   night: 'Night',
 };
 
@@ -18,7 +18,7 @@ export const FilterChipBar: React.FC = () => {
   if (filters.max_budget) {
     activeChips.push({
       key: 'max_budget',
-      label: `Under ₹${filters.max_budget.toLocaleString()}`,
+      label: `Max fare: ₹${filters.max_budget.toLocaleString()}`,
       onRemove: () => clearFilter('max_budget'),
     });
   }
@@ -28,7 +28,7 @@ export const FilterChipBar: React.FC = () => {
     const mins = filters.max_duration_minutes % 60;
     activeChips.push({
       key: 'max_duration',
-      label: `Under ${hours > 0 ? `${hours}h ` : ''}${mins > 0 ? `${mins}m` : ''}`.trim(),
+      label: `Max duration: ${hours > 0 ? `${hours}h ` : ''}${mins > 0 ? `${mins}m` : ''}`.trim(),
       onRemove: () => clearFilter('max_duration_minutes'),
     });
   }
@@ -36,7 +36,7 @@ export const FilterChipBar: React.FC = () => {
   if (filters.flight_direct_only) {
     activeChips.push({
       key: 'flight_direct',
-      label: 'Direct Flights Only',
+      label: 'Direct flights only',
       onRemove: () => clearFilter('flight_direct_only'),
     });
   }
@@ -44,7 +44,7 @@ export const FilterChipBar: React.FC = () => {
   if (filters.bus_ac_only) {
     activeChips.push({
       key: 'bus_ac',
-      label: 'AC Bus Only',
+      label: 'AC buses only',
       onRemove: () => clearFilter('bus_ac_only'),
     });
   }
@@ -54,7 +54,7 @@ export const FilterChipBar: React.FC = () => {
       const slotName = TIME_SLOT_LABELS[slot] || slot.replace('_', ' ');
       activeChips.push({
         key: `time_${slot}`,
-        label: `Dep: ${slotName}`,
+        label: `Departure: ${slotName}`,
         onRemove: () => {
           const next = filters.time_of_day?.filter((s) => s !== slot);
           if (!next || next.length === 0) {
@@ -72,7 +72,7 @@ export const FilterChipBar: React.FC = () => {
       {/* Active chips and count */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm font-bold text-slate-900">
-          {results.length} {results.length === 1 ? 'Journey' : 'Journeys'} found
+          Showing {results.length} {results.length === 1 ? 'available journey' : 'available journeys'}
         </span>
 
         {activeChips.length > 0 && (
@@ -81,13 +81,14 @@ export const FilterChipBar: React.FC = () => {
             {activeChips.map((chip) => (
               <span
                 key={chip.key}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-900 border border-indigo-200"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-900 border border-indigo-200/80 shadow-2xs"
               >
-                {chip.label}
+                <span>{chip.label}</span>
                 <button
                   type="button"
                   onClick={chip.onRemove}
-                  className="hover:text-indigo-600 rounded-full p-0.5 cursor-pointer"
+                  className="hover:text-rose-600 rounded-full p-0.5 cursor-pointer transition-colors"
+                  aria-label={`Remove filter ${chip.label}`}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -96,23 +97,29 @@ export const FilterChipBar: React.FC = () => {
             <button
               type="button"
               onClick={resetAllFilters}
-              className="text-xs font-medium text-slate-500 hover:text-slate-800 underline cursor-pointer ml-1"
+              className="text-xs font-semibold text-slate-500 hover:text-indigo-600 flex items-center gap-1 cursor-pointer ml-1 transition-colors"
             >
-              Reset all
+              <Trash2 className="w-3 h-3" />
+              <span>Clear all filters</span>
             </button>
           </>
         )}
       </div>
 
       {/* Sorting Tabs */}
-      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold self-start sm:self-auto">
-        <span className="text-slate-500 px-2 flex items-center gap-1">
+      <div 
+        role="group" 
+        aria-label="Sort journey results"
+        className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold self-start sm:self-auto"
+      >
+        <span className="text-slate-500 px-2 flex items-center gap-1 text-[11px]">
           <SlidersHorizontal className="w-3 h-3" />
-          Sort:
+          Sort by:
         </span>
         <button
           type="button"
           onClick={() => setSortBy('recommended')}
+          title="Best overall balance of travel time, fare, and transfer convenience"
           className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
             sortBy === 'recommended' ? 'bg-white text-indigo-950 shadow-xs' : 'text-slate-600 hover:text-slate-900'
           }`}
@@ -122,6 +129,7 @@ export const FilterChipBar: React.FC = () => {
         <button
           type="button"
           onClick={() => setSortBy('cheapest')}
+          title="Lowest total fare first"
           className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
             sortBy === 'cheapest' ? 'bg-white text-indigo-950 shadow-xs' : 'text-slate-600 hover:text-slate-900'
           }`}
@@ -131,6 +139,7 @@ export const FilterChipBar: React.FC = () => {
         <button
           type="button"
           onClick={() => setSortBy('fastest')}
+          title="Shortest total travel duration first"
           className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
             sortBy === 'fastest' ? 'bg-white text-indigo-950 shadow-xs' : 'text-slate-600 hover:text-slate-900'
           }`}
@@ -140,11 +149,12 @@ export const FilterChipBar: React.FC = () => {
         <button
           type="button"
           onClick={() => setSortBy('earliest_arrival')}
+          title="Arrive at destination earliest in the day"
           className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
             sortBy === 'earliest_arrival' ? 'bg-white text-indigo-950 shadow-xs' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Earliest
+          Earliest Arrival
         </button>
       </div>
     </div>

@@ -63,7 +63,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       const composite = await apiClient.planMultimodal(legs);
       set({ activeItinerary: composite, isLoading: false });
     } catch (err: any) {
-      set({ error: err.message || 'Error composing multimodal journey', isLoading: false });
+      set({ error: err.message || 'Unable to calculate multimodal itinerary. Please review your connection legs and try again.', isLoading: false });
     }
   },
 

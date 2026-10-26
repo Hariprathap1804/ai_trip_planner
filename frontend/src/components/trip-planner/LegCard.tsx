@@ -114,13 +114,13 @@ export const LegCard: React.FC<LegCardProps> = ({
         {/* Left: Sequence & Mode Badge & Operator */}
         <div className="flex items-center gap-3">
           {/* Step Sequence Badge */}
-          <div className="w-9 h-9 rounded-xl bg-indigo-950 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-            #{index + 1}
+          <div className="px-2.5 py-1.5 rounded-xl bg-indigo-950 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0 shadow-xs tracking-wide">
+            Leg {index + 1}
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border uppercase ${modeConfig.bg} ${modeConfig.border} ${modeConfig.text}`}>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border uppercase tracking-wide ${modeConfig.bg} ${modeConfig.border} ${modeConfig.text}`}>
                 {modeConfig.icon}
                 <span>{modeConfig.label}</span>
               </span>
@@ -133,37 +133,41 @@ export const LegCard: React.FC<LegCardProps> = ({
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
               <span>{leg.class_or_category}</span>
               <span>•</span>
-              <span className="flex items-center gap-1 font-mono">
+              <span className="flex items-center gap-1 font-mono text-slate-700 font-medium">
                 <Clock className="w-3 h-3 text-slate-400" />
-                {leg.duration_minutes} mins
+                {leg.duration_minutes}m in transit
               </span>
               <span>•</span>
-              <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
-                {leg.seat_status || 'Available'}
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">
+                Status: {leg.seat_status || 'Available'}
               </span>
             </div>
           </div>
         </div>
 
         {/* Center: Transit Origin -> Destination */}
-        <div className="flex items-center gap-4 text-xs flex-1 max-w-md justify-between bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+        <div className="flex items-center gap-4 text-xs flex-1 max-w-md justify-between bg-slate-50/80 p-3 rounded-xl border border-slate-200/70">
           <div className="min-w-0">
+            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Departure</div>
             <div className="font-mono font-extrabold text-sm text-slate-900">{depTime}</div>
-            <div className="text-slate-700 font-semibold truncate text-xs">{leg.origin.city}</div>
+            <div className="text-slate-800 font-semibold truncate text-xs">{leg.origin.city}</div>
             <div className="text-[11px] text-slate-500 truncate max-w-[140px]">{leg.origin.name}</div>
           </div>
 
-          <div className="flex flex-col items-center justify-center shrink-0 text-slate-300">
-            <ArrowRight className="w-4 h-4 text-slate-400" />
-            <span className="text-[10px] text-slate-400 font-mono mt-0.5">{leg.duration_minutes}m</span>
+          <div className="flex flex-col items-center justify-center shrink-0 text-slate-400">
+            <ArrowRight className="w-4 h-4 text-slate-500" />
+            <span className="text-[10px] text-slate-500 font-mono mt-0.5 font-medium">
+              {leg.duration_minutes}m direct
+            </span>
           </div>
 
           <div className="min-w-0 text-right">
+            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Arrival</div>
             <div className="font-mono font-extrabold text-sm text-slate-900">{arrTime}</div>
-            <div className="text-slate-700 font-semibold truncate text-xs">{leg.destination.city}</div>
+            <div className="text-slate-800 font-semibold truncate text-xs">{leg.destination.city}</div>
             <div className="text-[11px] text-slate-500 truncate max-w-[140px]">{leg.destination.name}</div>
           </div>
         </div>
@@ -171,7 +175,7 @@ export const LegCard: React.FC<LegCardProps> = ({
         {/* Right: Fare & Action Buttons (Edit, Reorder, Delete) */}
         <div className="flex items-center justify-between lg:justify-end gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
           <div className="text-right">
-            <div className="text-[10px] text-slate-400 uppercase font-semibold">Simulated Fare</div>
+            <div className="text-[10px] text-slate-500 uppercase font-semibold">Estimated Fare (1 traveler)</div>
             <div className="font-mono font-extrabold text-base text-slate-900">
               ₹{leg.fare.toLocaleString()}
             </div>
@@ -184,7 +188,8 @@ export const LegCard: React.FC<LegCardProps> = ({
               type="button"
               disabled={index === 0}
               onClick={() => onMoveUp(index)}
-              title="Move Leg Up"
+              title="Move leg earlier in itinerary"
+              aria-label={`Move leg ${index + 1} earlier`}
               className={`p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-white transition-colors cursor-pointer ${
                 index === 0 ? 'opacity-30 cursor-not-allowed' : ''
               }`}
@@ -197,7 +202,8 @@ export const LegCard: React.FC<LegCardProps> = ({
               type="button"
               disabled={index === totalLegs - 1}
               onClick={() => onMoveDown(index)}
-              title="Move Leg Down"
+              title="Move leg later in itinerary"
+              aria-label={`Move leg ${index + 1} later`}
               className={`p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-white transition-colors cursor-pointer ${
                 index === totalLegs - 1 ? 'opacity-30 cursor-not-allowed' : ''
               }`}
@@ -209,11 +215,12 @@ export const LegCard: React.FC<LegCardProps> = ({
             <button
               type="button"
               onClick={() => onEdit(leg)}
-              title="Edit Leg Details"
+              title="Edit leg details"
+              aria-label={`Edit details for leg ${index + 1}`}
               className="px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5" />
-              <span>Edit</span>
+              <span>Edit Leg</span>
             </button>
 
             {/* Delete Leg */}
@@ -221,7 +228,8 @@ export const LegCard: React.FC<LegCardProps> = ({
               type="button"
               disabled={totalLegs <= 1}
               onClick={() => onRemove(leg.id)}
-              title={totalLegs <= 1 ? "Cannot delete the only leg" : "Delete Leg"}
+              title={totalLegs <= 1 ? "At least one leg is required in an itinerary" : "Remove leg from itinerary"}
+              aria-label={`Remove leg ${index + 1}`}
               className={`p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer ${
                 totalLegs <= 1 ? 'opacity-30 cursor-not-allowed' : ''
               }`}

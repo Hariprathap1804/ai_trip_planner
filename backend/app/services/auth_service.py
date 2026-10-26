@@ -130,14 +130,14 @@ class AuthService:
         # Check in memory
         for u in _in_memory_users.values():
             if u["email"].lower() == clean_email:
-                raise ValueError("An account with this email address already exists.")
+                raise ValueError("An account with this email address already exists. Please sign in instead.")
         
         # Check in Supabase if configured
         if supabase_client:
             try:
                 res = supabase_client.table("users").select("id").eq("email", clean_email).execute()
                 if res.data and len(res.data) > 0:
-                    raise ValueError("An account with this email address already exists.")
+                    raise ValueError("An account with this email address already exists. Please sign in instead.")
             except Exception as e:
                 logger.warning(f"Supabase user lookup exception (continuing with local store): {e}")
 
@@ -170,7 +170,7 @@ class AuthService:
         return {
             "user": public_user,
             "token": token,
-            "message": "Registration successful"
+            "message": "Account created successfully"
         }
 
     @classmethod
@@ -196,17 +196,17 @@ class AuthService:
                 logger.warning(f"Supabase login lookup exception: {e}")
 
         if not user_record:
-            raise ValueError("No user account found with this email address.")
+            raise ValueError("No account found with this email address. Please check your spelling or create a new account.")
             
         if not verify_password(password, user_record.get("password_hash", "")):
-            raise ValueError("Invalid password. Please check your credentials.")
+            raise ValueError("Incorrect password. Please verify your credentials and try again.")
 
         public_user = cls._sanitize_user(user_record)
         token = create_access_token(public_user)
         return {
             "user": public_user,
             "token": token,
-            "message": "Login successful"
+            "message": "Signed in successfully"
         }
 
     @classmethod

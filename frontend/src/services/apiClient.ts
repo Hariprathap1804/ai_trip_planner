@@ -121,7 +121,7 @@ export const apiClient = {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(formatApiError(data, 'Registration failed'));
+      throw new Error(formatApiError(data, 'Unable to create your account. Please check your details and try again.'));
     }
     return data;
   },
@@ -137,7 +137,7 @@ export const apiClient = {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(formatApiError(data, 'Invalid email or password'));
+      throw new Error(formatApiError(data, 'Incorrect email or password. Please verify your credentials and try again.'));
     }
     return data;
   },

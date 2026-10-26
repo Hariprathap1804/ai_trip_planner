@@ -10,10 +10,11 @@ export const QuickPromptChips: React.FC = () => {
   }, [fetchQuickPrompts]);
 
   const defaultPrompts = [
-    { label: 'Cheapest under ₹1,000', prompt: 'Find the cheapest way from Bengaluru to Chennai tomorrow under ₹1,000.' },
-    { label: 'Arrive before 10 AM', prompt: 'Show fastest journeys from Bengaluru to Chennai arriving before 10 AM.' },
-    { label: 'Multimodal Train + Cab', prompt: 'Plan a multimodal journey with cab for last mile and train for long distance.' },
-    { label: 'Direct Flights Only', prompt: 'Show direct flights from Bengaluru to Chennai under ₹6,000.' },
+    { label: 'Cheapest under ₹1,000', prompt: 'Find the cheapest journey from Bengaluru to Chennai tomorrow under ₹1,000.' },
+    { label: 'Arrive before 10:00 AM', prompt: 'Show journeys from Bengaluru to Chennai arriving before 10:00 AM.' },
+    { label: 'Train + Cab Connection', prompt: 'Plan a door-to-door journey combining an express train with a cab for the final leg.' },
+    { label: 'Direct Flights Only', prompt: 'Show direct flights from Delhi to Mumbai under ₹5,000.' },
+    { label: 'My Bookings', prompt: 'Show my upcoming travel reservations and boarding passes.' },
   ];
 
   const items = quickPrompts.length > 0 ? quickPrompts : defaultPrompts;
@@ -24,10 +25,10 @@ export const QuickPromptChips: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap" role="region" aria-label="Suggested AI travel prompts">
       <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
         <Sparkles className="w-3.5 h-3.5 text-violet-600" />
-        AI Prompts:
+        Try asking our AI assistant:
       </span>
       {items.map((item, idx) => (
         <button

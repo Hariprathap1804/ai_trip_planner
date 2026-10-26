@@ -23,21 +23,32 @@ if settings.GROQ_API_KEY:
         logger.warning(f"Could not initialize Groq SDK: {e}")
         groq_client = None
 
-SYSTEM_PROMPT = """You are TripPilot AI, an intelligent conversational multimodal travel companion for India.
-You help users discover, filter, compare, plan, and book journeys across SIX transportation modes:
+SYSTEM_PROMPT = """You are TripPilot AI, a knowledgeable, friendly, and professional conversational travel companion for India.
+You help travelers discover, filter, compare, plan, and book journeys across SIX transportation modes:
 1. Flights
 2. Trains
 3. Metro
 4. Buses
 5. Cabs
 6. Autos
-And Multimodal journeys (combining cabs, high-speed rail, and metro).
+And connected Multimodal journeys (synchronizing first-mile cabs/autos, line-haul flights/trains, and last-mile metro/cabs).
 
-Supported Hubs & Cities: Bengaluru, Chennai, Mumbai, Delhi, Hyderabad, Pune, Goa.
+Supported Cities & Transit Hubs: Bengaluru, Chennai, Mumbai, Delhi, Hyderabad, Pune, Goa.
 
-When the user asks something, you MUST return a valid JSON object strictly matching this schema:
+TONE & BEHAVIOR GUIDELINES:
+- Conversational, concise, professional, and helpful.
+- Explain recommendations in plain English grounded strictly in actual journey data.
+- Clearly distinguish between suggesting an action, executing it, and confirming that it succeeded.
+- For consequential actions (like booking cancellation), ALWAYS set "requires_user_confirmation": true and explain what will happen before proceeding.
+- When origin, destination, or dates are missing or ambiguous, politely ask clarifying questions to help the traveler narrow down their options.
+- If the user asks about payments, explain that TripPilot AI integrates securely with Razorpay (UPI, Cards, NetBanking) with 256-bit SSL encryption.
+- If evaluation/demonstration mode is relevant, clearly communicate prototype boundaries without sounding broken or confusing.
+- Never invent unavailable carriers, imaginary flights, fake train schedules, or completed actions.
+
+SCHEMA CONTRACT:
+Return a valid JSON object strictly matching this schema:
 {
-  "reply_text": "Friendly, professional, helpful answer directly addressing the user's question.",
+  "reply_text": "Friendly, professional, helpful answer directly addressing the user's request.",
   "action_proposal": {
     "action": "search_journeys" | "apply_filters" | "sort_results" | "plan_multimodal_trip" | "quick_book" | "get_bookings" | "cancel_demo_booking",
     "parameters": {
@@ -53,7 +64,7 @@ When the user asks something, you MUST return a valid JSON object strictly match
       "sort_by": "recommended" | "cheapest" | "fastest" | "earliest_arrival",
       "reference_number": "TP-XXXXXX" (only if cancel action)
     },
-    "explanation": "Clear summary of the action to be applied to the website",
+    "explanation": "Plain-English summary of the action suggested or applied",
     "requires_user_confirmation": false (true only for cancel actions)
   } or null,
   "suggested_followups": ["Question 1", "Question 2", "Question 3"]
@@ -61,14 +72,14 @@ When the user asks something, you MUST return a valid JSON object strictly match
 
 CRITICAL RULES FOR ACTION PROPOSALS AND EDGE CASES:
 1. Set "action_proposal" to null whenever the user asks unrelated questions, general chit-chat, greetings, or FAQ queries.
-   - If the user asks general questions (e.g., "Hi", "How are you?", "What is the capital of France?", "Tell me a joke", "How does Razorpay work?", "What is multimodal travel?"):
-     a) Answer their question directly and politely in "reply_text".
+   - If the user asks general questions (e.g., "Hi", "How are you?", "What can you do?", "Tell me a joke", "How does payment work?", "What is multimodal travel?"):
+     a) Answer their question directly, warmly, and helpfully in "reply_text".
      b) Set "action_proposal": null.
-     c) DO NOT invent or trigger any trip searches or bookings!
+     c) DO NOT trigger any trip searches or bookings!
 2. ONLY set "action_proposal" when the user explicitly requests to search, filter, plan, compare, or book travel journeys.
 3. If the user wants to book immediately, quick book, reserve, or purchase a trip (e.g., 'Book flight to Chennai', 'Book cheapest train', 'Book this trip immediately', 'Quick book'), set action to 'quick_book'.
-4. If user wants to cancel a booking, set action to 'cancel_demo_booking' and requires_user_confirmation: true.
-5. Currency is Indian Rupee (₹). Never invent unavailable real flights/trains.
+4. If the user wants to cancel a booking, set action to 'cancel_demo_booking' and requires_user_confirmation: true.
+5. Currency is Indian Rupee (₹).
 6. Output ONLY raw JSON without markdown code fences or backticks.
 """
 
@@ -125,7 +136,7 @@ class AIService:
                         else:
                             bookings = await DatabaseRepository.get_bookings_by_user(user_id=user_id or "", email=user_email or "")
                             active_count = len([b for b in bookings if b.get("status") == "CONFIRMED"])
-                            parsed["reply_text"] = f"You currently have {active_count} active simulated booking{'s' if active_count != 1 else ''} in your account."
+                            parsed["reply_text"] = f"You currently have {active_count} confirmed booking{'s' if active_count != 1 else ''} in your account. You can view full ticket details and manage itineraries in your bookings dashboard."
                     
                     # Edge-case safety guard: If user prompt is purely conversational or lacks travel intent, cancel unwanted action proposal
                     prompt_lower = prompt.lower().strip()
@@ -226,7 +237,7 @@ class AIService:
                                 proposal["parameters"]["fare"] = base_fare
                                 proposal["parameters"]["total_amount"] = total_amt
                                 proposal["parameters"]["mode"] = selected_journey["modes"][0] if len(selected_journey["modes"]) == 1 else "multimodal"
-                                proposal["explanation"] = f"Quick Book: {selected_journey['origin']['city']} → {selected_journey['destination']['city']} ({selected_journey['legs'][0].get('operator', 'Transit')}, ₹{total_amt:,}). Click Book & Pay to open Razorpay immediately."
+                                proposal["explanation"] = f"Quick Book: {selected_journey['origin']['city']} → {selected_journey['destination']['city']} ({selected_journey['legs'][0].get('operator', 'Transit')}, ₹{total_amt:,}). Review itinerary and proceed to secure checkout."
                         
                     return parsed
             except Exception as e:
@@ -258,16 +269,16 @@ class AIService:
         if is_greeting and not has_explicit_travel_action:
             return {
                 "reply_text": (
-                    "Hello! I am **TripPilot AI**, your multimodal travel copilot for India. ✈️🚆🚌\n\n"
-                    "I can help you search, compare, plan, and book door-to-door trips across **Flights, Trains, Buses, Metro, Cabs, and Autos** with instant Razorpay test checkout.\n\n"
-                    "How can I assist your travels today?"
+                    "Hello! I'm your **TripPilot AI** travel companion. ✈️🚆🚌\n\n"
+                    "I can help you search, compare, plan, and book journeys across **Flights, Trains, Buses, Metro, Cabs, and Autos** with seamless door-to-door connections.\n\n"
+                    "Where are you planning to travel, and what matters most for your trip—speed, budget, or comfort?"
                 ),
                 "action_proposal": None,
                 "suggested_followups": [
-                    "Book the cheapest flight from Bengaluru to Chennai",
+                    "Find the cheapest train from Bengaluru to Chennai",
                     "Plan a multimodal trip with train and cab",
-                    "What can you do?",
-                    "Show my bookings"
+                    "Show direct flights under ₹5,000",
+                    "What can you do?"
                 ]
             }
 
@@ -294,19 +305,19 @@ class AIService:
         if any(kw in text for kw in ["who are you", "what can you do", "what is trippilot", "help me", "how to use", "what are your features", "what do you do", "features"]) or text == "help":
             return {
                 "reply_text": (
-                    "I am **TripPilot AI**, an intelligent conversational travel assistant for India. Here is what I can do for you:\n\n"
-                    "• ✈️ **Unified 6-Mode Search:** Search and compare Flights, Trains, Buses, Metro, Cabs, and Autos.\n"
-                    "• 🔀 **Multimodal Itineraries:** Automatically compose chained door-to-door routes (e.g. Cab ➔ Vande Bharat Train ➔ Metro) with transfer buffer guarantees.\n"
-                    "• 💳 **Instant Quick Booking:** Ask me to book any flight or train, and I'll launch direct Razorpay payment right in the chat.\n"
-                    "• 🔍 **Smart Filters & Sorting:** Filter by budget (e.g. *under ₹5,000*), non-stop flights, AC buses, and departure time slots.\n"
-                    "• 🎫 **Booking Management:** Review confirmed travel passes and manage cancellations.\n\n"
-                    "Try asking: *'Book the cheapest flight from Bengaluru to Chennai'* or *'Plan a multimodal trip with train and cab'*!"
+                    "I am **TripPilot AI**, your intelligent conversational travel companion for India. Here is how I can make your travel seamless:\n\n"
+                    "• ✈️ **Unified 6-Mode Search:** Compare flights, trains, buses, metro, cabs, and autos all in one place.\n"
+                    "• 🔀 **Door-to-Door Multimodal Routes:** Automatically assemble connected journeys (e.g., Cab ➔ High-speed Train ➔ Metro) with verified transfer buffers.\n"
+                    "• 🔍 **Tailored Filters & Sorting:** Narrow options by your budget cap, non-stop flights, AC buses, and arrival deadlines.\n"
+                    "• 💳 **Fast & Secure Booking:** Select your journey and proceed smoothly with verified Razorpay checkout.\n"
+                    "• 🎫 **Booking Management:** Check confirmed itineraries, review ticket details, or request cancellations.\n\n"
+                    "Try asking: *'Find the cheapest morning train to Chennai under ₹1,000'* or *'Plan a door-to-door trip combining a train and a cab'*!"
                 ),
                 "action_proposal": None,
                 "suggested_followups": [
                     "Book the cheapest flight to Chennai",
                     "Plan a multimodal trip",
-                    "How does Razorpay payment work?"
+                    "How does payment work?"
                 ]
             }
 
@@ -314,15 +325,15 @@ class AIService:
         if any(kw in text for kw in ["how does payment work", "what is razorpay", "is payment real", "payment method", "how do i pay", "test mode", "test card", "payment"]):
             return {
                 "reply_text": (
-                    "TripPilot AI is integrated with the **Razorpay Payment Gateway in Test Mode**:\n\n"
-                    "• 💳 **Test Cards:** You can use sandbox card `4111 1111 1111 1111` (any future expiry, CVV `123`, OTP `123456`).\n"
-                    "• 📱 **Test UPI:** Use `success@razorpay` or scan the sandbox QR code.\n"
-                    "• 🔒 **Security:** Every transaction creates a server order in paise and cryptographically verifies the HMAC-SHA256 signature.\n"
-                    "• 🛡️ **Zero Real Charges:** This is a safe testing sandbox; no real money or bank accounts will ever be charged."
+                    "TripPilot AI is integrated with the **Razorpay Payment Gateway**:\n\n"
+                    "• 💳 **Multiple Payment Options:** Complete transactions using UPI (Google Pay, PhonePe, Paytm, BHIM), Credit/Debit Cards (Visa, Mastercard, RuPay), NetBanking, and Wallets.\n"
+                    "• 🔒 **Enterprise-Grade Security:** Every order is secured with 256-bit SSL encryption, PCI-DSS compliance, and cryptographic signature verification.\n"
+                    "• ⚡ **Instant Confirmation:** Once your payment is verified, your confirmed itinerary and ticket references are issued right away.\n"
+                    "• 🛡️ **Demonstration Safe:** During this evaluation phase, transactions use secure sandbox verification so no actual money is debited from your personal accounts."
                 ),
                 "action_proposal": None,
                 "suggested_followups": [
-                    "Book a flight using Razorpay Test",
+                    "Book a flight to Chennai",
                     "How does multimodal planning work?",
                     "View my bookings"
                 ]
@@ -332,12 +343,12 @@ class AIService:
         if any(kw in text for kw in ["what is multimodal", "how does multimodal work", "explain multimodal", "what are multimodal journeys"]):
             return {
                 "reply_text": (
-                    "**Multimodal travel** combines multiple transit types into one synchronized journey:\n\n"
-                    "Instead of just booking a single flight or train, TripPilot AI chains together:\n"
-                    "1. **First-Mile:** Local auto or on-demand cab from your home to the transit hub.\n"
-                    "2. **Line-Haul:** Express flight or Vande Bharat high-speed train for the intercity leg.\n"
-                    "3. **Last-Mile:** City metro or cab connection to your final doorstep.\n\n"
-                    "Our engine automatically calculates and verifies transfer buffers (e.g. 90 mins for flights, 30 mins for trains) so you never miss a connection."
+                    "**Multimodal travel** connects different transportation types into one synchronized, door-to-door journey:\n\n"
+                    "Rather than booking isolated tickets, TripPilot AI brings everything together:\n"
+                    "1. **First-Mile Pickup:** A local auto or on-demand cab from your doorstep to the station or airport.\n"
+                    "2. **Line-Haul Travel:** An express train or direct flight connecting cities efficiently.\n"
+                    "3. **Last-Mile Drop-off:** A city metro ride or local cab straight to your final destination.\n\n"
+                    "Our system automatically builds in sensible transfer buffers (e.g., 90 minutes for airport check-in, 30 minutes for railway stations) so you can make your connections comfortably without rushing."
                 ),
                 "action_proposal": None,
                 "suggested_followups": [
@@ -351,11 +362,11 @@ class AIService:
         if any(kw in text for kw in ["baggage", "luggage", "cabin bag", "check in bag"]):
             return {
                 "reply_text": (
-                    "Here are the standard baggage guidelines across our simulated carriers:\n\n"
-                    "• ✈️ **Flights (IndiGo, Air India, Akasa):** 7 kg Cabin Baggage + 15 kg Check-in Baggage included in Economy.\n"
-                    "• 🚆 **Trains (IRCTC / Vande Bharat):** Up to 40 kg per passenger in AC Chair Car / Executive.\n"
-                    "• 🚌 **Intercity Buses:** Up to 2 pieces of medium luggage in the under-deck hold.\n"
-                    "• 🚕 **Cabs & Autos:** 2–3 suitcases for Sedans/SUVs, handheld bags for Autos."
+                    "Here are the standard baggage guidelines across our supported transit operators:\n\n"
+                    "• ✈️ **Domestic Flights (IndiGo, Air India, Akasa):** 7 kg cabin baggage + 15 kg check-in baggage included in standard Economy.\n"
+                    "• 🚆 **Indian Railways & Vande Bharat:** Generous allowance up to 40 kg per passenger in AC Chair Car and Executive classes.\n"
+                    "• 🚌 **Intercity Express Buses:** Up to 2 standard bags (approx. 20 kg total) in the secure lower luggage hold.\n"
+                    "• 🚕 **Cabs & Autos:** 2–3 standard suitcases in sedan/SUV trunks; lightweight personal bags for autos."
                 ),
                 "action_proposal": None,
                 "suggested_followups": [
@@ -371,21 +382,21 @@ class AIService:
             ref_number = match.group(0).upper() if match else "TP-849201"
             if not user_id and not user_email:
                 return {
-                    "reply_text": f"Please sign in to your TripPilot AI account to cancel booking {ref_number}.",
+                    "reply_text": f"Please sign in to your TripPilot AI account to cancel booking **{ref_number}**. This verifies account ownership before cancelling any travel reservations.",
                     "action_proposal": {
                         "action": "open_login",
                         "parameters": {},
-                        "explanation": "Sign in to verify booking ownership.",
+                        "explanation": "Sign in to verify booking ownership and proceed with cancellation.",
                         "requires_user_confirmation": False
                     },
                     "suggested_followups": ["Log in to my account", "Keep my booking"]
                 }
             return {
-                "reply_text": f"I can help you cancel demo booking {ref_number}. Please confirm if you wish to proceed.",
+                "reply_text": f"I can help you cancel booking **{ref_number}**. Cancelling will release your reserved tickets. Please confirm below if you would like me to proceed with this cancellation.",
                 "action_proposal": {
                     "action": "cancel_demo_booking",
                     "parameters": {"reference_number": ref_number},
-                    "explanation": f"Request cancellation for simulated booking {ref_number}.",
+                    "explanation": f"Request cancellation for booking {ref_number}. Requires your confirmation before executing.",
                     "requires_user_confirmation": True
                 },
                 "suggested_followups": ["Confirm cancellation", "Keep my booking", "View my active bookings"]
@@ -406,7 +417,7 @@ class AIService:
             bookings = await DatabaseRepository.get_bookings_by_user(user_id=user_id or "", email=user_email or "")
             active_count = len([b for b in bookings if b.get("status") == "CONFIRMED"])
             return {
-                "reply_text": f"You currently have {active_count} active simulated booking{'s' if active_count != 1 else ''} in your account.",
+                "reply_text": f"You currently have {active_count} confirmed booking{'s' if active_count != 1 else ''} in your account. You can view full ticket details and manage itineraries in your bookings dashboard.",
                 "action_proposal": {
                     "action": "get_bookings",
                     "parameters": {},
@@ -426,42 +437,60 @@ class AIService:
         if not has_travel_keywords:
             return {
                 "reply_text": (
-                    "I am **TripPilot AI**, your dedicated multimodal travel assistant for India.\n\n"
-                    "I specialize in searching, planning, comparing, and booking journeys across **Flights, Trains, Buses, Metro, Cabs, and Autos** (including instant Razorpay checkout and door-to-door multimodal itineraries).\n\n"
-                    "While I focus on travel, let me know if you would like me to find routes, compare fares between cities, or book a trip for you!"
+                    "I am **TripPilot AI**, your dedicated travel companion for India.\n\n"
+                    "I specialize in searching schedules, comparing fares, composing door-to-door multimodal routes, and managing travel bookings across **Flights, Trains, Buses, Metro, Cabs, and Autos**.\n\n"
+                    "While I can't assist with general non-travel topics, I would love to help you plan your next journey! Which destination are you headed to?"
                 ),
                 "action_proposal": None,
                 "suggested_followups": [
-                    "Book the cheapest flight from Bengaluru to Chennai",
+                    "Find the cheapest train from Bengaluru to Chennai",
                     "Plan a multimodal trip with train and cab",
-                    "What can you do?",
-                    "How does Razorpay work?"
+                    "Show direct flights under ₹5,000",
+                    "What can you do?"
                 ]
             }
 
         # 9. Extract Origin and Destination
         origin = None
         destination = None
+        explicit_origin_found = False
+        explicit_destination_found = False
 
         from_to_match = re.search(r"from\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+?)(?:$|\s+tomorrow|\s+under|\s+before|\s+with|\s+in)", text)
         if from_to_match:
             origin = from_to_match.group(1).strip()
             destination = from_to_match.group(2).strip()
+            explicit_origin_found = True
+            explicit_destination_found = True
         else:
             to_from_match = re.search(r"to\s+([a-zA-Z\s]+?)\s+from\s+([a-zA-Z\s]+?)(?:$|\s+tomorrow|\s+under|\s+before|\s+with|\s+in)", text)
             if to_from_match:
                 destination = to_from_match.group(1).strip()
                 origin = to_from_match.group(2).strip()
+                explicit_origin_found = True
+                explicit_destination_found = True
+            else:
+                to_match = re.search(r"(?:to|towards)\s+([a-zA-Z\s]+?)(?:$|\s+tomorrow|\s+under|\s+before|\s+with|\s+in)", text)
+                if to_match:
+                    destination = to_match.group(1).strip()
+                    explicit_destination_found = True
+                from_match = re.search(r"(?:from|departing|leaving)\s+([a-zA-Z\s]+?)(?:$|\s+tomorrow|\s+under|\s+before|\s+with|\s+in)", text)
+                if from_match:
+                    origin = from_match.group(1).strip()
+                    explicit_origin_found = True
         
         if not origin and current_search and current_search.get("origin"):
             origin = current_search["origin"]
         if not destination and current_search and current_search.get("destination"):
             destination = current_search["destination"]
 
+        route_defaulted = False
         if not origin:
             origin = "Bengaluru"
+            route_defaulted = True
         if not destination:
             destination = "Chennai"
+            route_defaulted = True
 
         # 10. Extract Budget
         max_budget = None
@@ -548,14 +577,14 @@ class AIService:
             for idx, l in enumerate(legs):
                 dep_t = l["departure_time"].split("T")[1][:5]
                 arr_t = l["arrival_time"].split("T")[1][:5]
-                leg_summaries.append(f"{idx+1}. {l['operator']} ({l['mode'].title()}): {l['origin']['name']} ➔ {l['destination']['name']} ({dep_t}–{arr_t}, ₹{l['fare']:,})")
+                leg_summaries.append(f"{idx+1}. **{l['operator']}** ({l['mode'].title()}): {l['origin']['name']} ➔ {l['destination']['name']} ({dep_t}–{arr_t}, ₹{l['fare']:,})")
 
             if is_quick_booking_intent:
                 reply = (
-                    f"I've configured your {len(legs)}-leg multimodal journey from **{origin.title()}** to **{destination.title()}** for **Immediate Quick Booking**:\n\n"
+                    f"I've configured a {len(legs)}-leg connected multimodal journey from **{origin.title()}** to **{destination.title()}** for review and immediate booking:\n\n"
                     + "\n".join(leg_summaries)
-                    + f"\n\n**Total Door-to-Door Duration:** {dur_h}h {dur_m}m | **Total Fare Due:** ₹{total_amt:,} (Base ₹{comp_itinerary['total_fare']:,} + 12% Taxes)\n\n"
-                    + "Click **Book & Pay with Razorpay** below to open the checkout gateway immediately and confirm your ticket."
+                    + f"\n\n**Total Travel Time:** {dur_h}h {dur_m}m | **Total Fare Due:** ₹{total_amt:,} (Base fare ₹{comp_itinerary['total_fare']:,} + estimated taxes)\n\n"
+                    + "Click **Book & Pay with Razorpay** below to open secure checkout, or customize passenger details first."
                 )
                 return {
                     "reply_text": reply,
@@ -572,7 +601,7 @@ class AIService:
                             "total_amount": total_amt,
                             "mode": "multimodal"
                         },
-                        "explanation": f"Quick Book {len(legs)}-leg Multimodal Route ({modes_chain}, ₹{total_amt:,}) directly with Razorpay.",
+                        "explanation": f"Quick Book {len(legs)}-leg Multimodal Route ({modes_chain}, ₹{total_amt:,}) via Razorpay.",
                         "requires_user_confirmation": False
                     },
                     "suggested_followups": [
@@ -583,10 +612,10 @@ class AIService:
                 }
             
             reply = (
-                f"I've composed a custom {len(legs)}-leg multimodal itinerary from **{origin.title()}** to **{destination.title()}**:\n\n"
+                f"I've mapped out a connected {len(legs)}-leg door-to-door itinerary from **{origin.title()}** to **{destination.title()}** ({modes_chain}):\n\n"
                 + "\n".join(leg_summaries)
-                + f"\n\n**Total Door-to-Door Duration:** {dur_h}h {dur_m}m | **Total Fare:** ₹{comp_itinerary['total_fare']:,} | **Transfers:** {comp_itinerary['transfers_count']}\n\n"
-                + "You can view, edit, or reorder these legs directly in the Multimodal Trip Planner."
+                + f"\n\n**Total Travel Time:** {dur_h}h {dur_m}m | **Total Fare:** ₹{comp_itinerary['total_fare']:,} | **Connections:** {comp_itinerary['transfers_count']}\n\n"
+                + "Each connection has been scheduled with adequate transfer buffers. You can fine-tune, add, or replace legs directly in the Multimodal Trip Planner."
             )
             return {
                 "reply_text": reply,
@@ -630,12 +659,12 @@ class AIService:
                 dur_m = selected_journey['total_duration_minutes'] % 60
 
                 reply = (
-                    f"Here is your selected trip ready for **Immediate Quick Booking**:\n\n"
+                    f"Here is a recommended option matching your request, ready for review and booking:\n\n"
                     f"✈️ **{operator_name}** ({mode_label})\n"
                     f"📍 **{selected_journey['origin']['city']}** ({selected_journey['origin']['name']}) ➔ **{selected_journey['destination']['city']}** ({selected_journey['destination']['name']})\n"
                     f"⏱️ **Departure:** {dep_time_str} | **Arrival:** {arr_time_str} ({dur_h}h {dur_m}m)\n"
-                    f"💳 **Total Amount Due:** ₹{total_amt:,} (Base ₹{base_fare:,} + Taxes & Fees)\n\n"
-                    f"Click **Book & Pay via Razorpay** below to open the checkout gateway immediately and secure your ticket."
+                    f"💳 **Total Amount Due:** ₹{total_amt:,} (Base fare ₹{base_fare:,} + estimated taxes)\n\n"
+                    f"Click **Book & Pay via Razorpay** below to open secure checkout, or customize traveller details first."
                 )
 
                 return {
@@ -650,7 +679,7 @@ class AIService:
                             "total_amount": total_amt,
                             "mode": selected_journey['modes'][0] if len(selected_journey['modes']) == 1 else "multimodal"
                         },
-                        "explanation": f"Quick Book {operator_name} ({selected_journey['origin']['city']} → {selected_journey['destination']['city']}, ₹{total_amt:,}) directly with Razorpay.",
+                        "explanation": f"Quick Book {operator_name} ({selected_journey['origin']['city']} → {selected_journey['destination']['city']}, ₹{total_amt:,}) via Razorpay.",
                         "requires_user_confirmation": False
                     },
                     "suggested_followups": [
@@ -678,19 +707,36 @@ class AIService:
         )
         match_count = len(matches)
 
-        response_parts = [
-            f"Found {match_count} options from **{origin.title()}** to **{destination.title()}**."
-        ]
-        if detected_modes:
-            response_parts.append(f"Filtered to: {', '.join(m.title() for m in detected_modes)}.")
-        if max_budget:
-            response_parts.append(f"Capped budget under ₹{int(max_budget):,}.")
-        if arrival_before:
-            response_parts.append(f"Prioritizing arrival before {arrival_before}.")
-        if sort_by != "recommended":
-            response_parts.append(f"Sorted by {sort_by.replace('_', ' ')}.")
+        if match_count > 0:
+            response_parts = [
+                f"I found {match_count} travel option{'s' if match_count != 1 else ''} from **{origin.title()}** to **{destination.title()}**."
+            ]
+            if detected_modes:
+                response_parts.append(f"Filtered to: {', '.join(m.title() for m in detected_modes)}.")
+            if max_budget:
+                response_parts.append(f"Budget capped under ₹{int(max_budget):,}.")
+            if arrival_before:
+                response_parts.append(f"Prioritizing arrival before {arrival_before}.")
+            if sort_by != "recommended":
+                sort_labels = {
+                    "cheapest": "lowest fare first",
+                    "fastest": "shortest duration first",
+                    "earliest_arrival": "earliest arrival time"
+                }
+                response_parts.append(f"Sorted by {sort_labels.get(sort_by, sort_by.replace('_', ' '))}.")
 
-        reply_text = " ".join(response_parts)
+            if route_defaulted and not explicit_origin_found and not explicit_destination_found:
+                response_parts.append("\n\n*(Showing our popular Bengaluru ➔ Chennai route. You can specify any other cities, like 'Flights from Delhi to Mumbai'.)*")
+            elif route_defaulted and explicit_destination_found and not explicit_origin_found:
+                response_parts.append(f"\n\n*(Departing from {origin.title()}. If departing from a different city, let me know!)*")
+
+            response_parts.append("\n\nI've updated the search results on your screen so you can inspect schedules and fares directly.")
+            reply_text = " ".join(response_parts)
+        else:
+            reply_text = (
+                f"I couldn't find any journeys matching your exact criteria from **{origin.title()}** to **{destination.title()}** with the active filters. "
+                f"Try relaxing your budget cap or expanding transit modes to see available options."
+            )
 
         return {
             "reply_text": reply_text,
@@ -710,6 +756,6 @@ class AIService:
                 f"Show only cheapest under ₹{int(max_budget or 1500)}",
                 "Plan multimodal trip with cab and train",
                 "Show fastest option",
-                "Arrive before 10 AM"
+                "Arrive before 10:00 AM"
             ]
         }

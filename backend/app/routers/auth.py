@@ -34,7 +34,7 @@ async def get_current_user_required(user: Optional[Dict[str, Any]] = Depends(get
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Please log in or sign up to book tickets."
+            detail="Sign in required: Please sign in or create an account to view and book journeys."
         )
     return user
 
@@ -55,7 +55,7 @@ def check_rate_limit(request: Request, action: str, max_attempts: int = 10, wind
         logger.warning(f"Rate limit exceeded on {action} from IP {client_ip}")
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Too many {action} attempts. Please wait {window_seconds} seconds before trying again.",
+            detail=f"Too many {action} attempts. For account security, please wait {window_seconds} seconds before trying again.",
             headers={"Retry-After": str(window_seconds)}
         )
     attempts.append(now)
@@ -82,7 +82,7 @@ async def register(payload: UserRegister, request: Request) -> Dict[str, Any]:
         logger.error(f"Registration failure: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred during registration. Please try again."
+            detail="We were unable to complete your registration. Please check your details and try again."
         )
 
 @router.post("/login", response_model=AuthResponse)
@@ -104,7 +104,7 @@ async def login(payload: UserLogin, request: Request) -> Dict[str, Any]:
         logger.error(f"Login failure: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred during login. Please try again."
+            detail="We were unable to complete your sign in. Please verify your connection and try again."
         )
 
 @router.get("/me")

@@ -294,15 +294,16 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div>
             <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
-              {modeTitle}
+              {modeTitle === 'Add New Leg' ? 'Add Transportation Leg' : 'Edit Transportation Leg'}
             </h2>
-            <p className="text-xs text-slate-500">
-              Configure transport mode, carrier, locations, timings, and simulated fare.
+            <p className="text-xs text-slate-500 mt-0.5">
+              Configure transport mode, operator, connection hubs, scheduled times, and estimated fare.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close modal"
             className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 cursor-pointer transition-colors"
           >
             <X className="w-4 h-4" />
@@ -314,7 +315,7 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
           {/* 1. Mode Switcher */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Transportation Mode
+              1. Transportation Mode
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {[
@@ -346,9 +347,9 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Operator / Service Carrier
+                2. Operator / Service Provider
               </label>
-              <span className="text-[11px] text-slate-400">e.g. IndiGo, Vande Bharat</span>
+              <span className="text-[11px] text-slate-400">e.g. IndiGo, Vande Bharat, Namma Metro</span>
             </div>
             <input
               type="text"
@@ -356,10 +357,11 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
               value={operator}
               onChange={(e) => setOperator(e.target.value)}
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-indigo-600 bg-white"
-              placeholder="e.g. Vande Bharat Express"
+              placeholder="e.g. Vande Bharat Express or UberGo Sedan"
             />
             {/* Quick Suggestions */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="text-[10px] text-slate-400 font-semibold">Suggested:</span>
               {currentPreset?.operators.map((op) => (
                 <button
                   key={op}
@@ -378,60 +380,65 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
           </div>
 
           {/* 3. Origin & Destination Hubs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/60 p-4 rounded-2xl border border-slate-200/80">
-            {/* Origin */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <MapPin className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Origin Hub / Location</span>
-              </div>
-              <input
-                type="text"
-                required
-                value={originCity}
-                onChange={(e) => setOriginCity(e.target.value)}
-                placeholder="City (e.g. Bengaluru)"
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white"
-              />
-              <input
-                type="text"
-                required
-                value={originName}
-                onChange={(e) => setOriginName(e.target.value)}
-                placeholder="Station / Airport / Address"
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white"
-              />
+          <div>
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              3. Transit Route & Connection Hubs
             </div>
-
-            {/* Destination */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <MapPin className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Destination Hub / Location</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80">
+              {/* Origin */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Departure Origin</span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={originCity}
+                  onChange={(e) => setOriginCity(e.target.value)}
+                  placeholder="City (e.g. Bengaluru)"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white"
+                />
+                <input
+                  type="text"
+                  required
+                  value={originName}
+                  onChange={(e) => setOriginName(e.target.value)}
+                  placeholder="Station, airport, or address"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white"
+                />
               </div>
-              <input
-                type="text"
-                required
-                value={destCity}
-                onChange={(e) => setDestCity(e.target.value)}
-                placeholder="City (e.g. Chennai)"
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white"
-              />
-              <input
-                type="text"
-                required
-                value={destName}
-                onChange={(e) => setDestName(e.target.value)}
-                placeholder="Station / Airport / Address"
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white"
-              />
+
+              {/* Destination */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Arrival Destination</span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={destCity}
+                  onChange={(e) => setDestCity(e.target.value)}
+                  placeholder="City (e.g. Chennai)"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white"
+                />
+                <input
+                  type="text"
+                  required
+                  value={destName}
+                  onChange={(e) => setDestName(e.target.value)}
+                  placeholder="Station, airport, or address"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white"
+                />
+              </div>
             </div>
           </div>
 
           {/* Hub Quick Preset Picker */}
           <div>
             <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-              Quick Hub Selection Suggestions
+              Popular Connection Hubs & Terminals
             </div>
             <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
               {TRANSIT_HUBS_SUGGESTIONS.map((h, i) => (
@@ -451,96 +458,109 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
           </div>
 
           {/* 4. Timings & Calculated Duration */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Departure Time
-              </label>
-              <div className="relative">
-                <input
-                  type="time"
-                  required
-                  value={depTime}
-                  onChange={(e) => setDepTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold bg-white"
-                />
-              </div>
+          <div>
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              4. Departure & Arrival Schedule
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Arrival Time
-              </label>
-              <div className="relative">
-                <input
-                  type="time"
-                  required
-                  value={arrTime}
-                  onChange={(e) => setArrTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold bg-white"
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Departure Time
+                </label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    required
+                    value={depTime}
+                    onChange={(e) => setDepTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold bg-white"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Duration (Calculated)
-              </label>
-              <div className="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-700 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                <span>{calculateDurationMinutes()} mins</span>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Arrival Time
+                </label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    required
+                    value={arrTime}
+                    onChange={(e) => setArrTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Duration (In Transit)
+                </label>
+                <div className="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-800 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{calculateDurationMinutes()}m in transit</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* 5. Fare & Category & Seat Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Simulated Fare (₹)
-              </label>
-              <div className="relative">
-                <IndianRupee className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="number"
-                  min="0"
-                  step="10"
-                  required
-                  value={fare}
-                  onChange={(e) => setFare(Number(e.target.value))}
-                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold bg-white"
-                />
+          <div>
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              5. Fare & Seat Details
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Estimated Fare (₹)
+                </label>
+                <div className="relative">
+                  <IndianRupee className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="number"
+                    min="0"
+                    step="10"
+                    required
+                    value={fare}
+                    onChange={(e) => setFare(Number(e.target.value))}
+                    className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold bg-white"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">Estimated per passenger</span>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Class / Category
-              </label>
-              <input
-                type="text"
-                required
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium bg-white"
-                placeholder="e.g. Chair Car (CC)"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Class / Vehicle Type
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium bg-white"
+                  placeholder="e.g. Chair Car (CC), Sedan"
+                />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">Cabin tier or vehicle size</span>
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Seat Availability
-              </label>
-              <select
-                value={seatStatus}
-                onChange={(e) => setSeatStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium bg-white"
-              >
-                <option value="Available">Available</option>
-                <option value="Few Seats Left">Few Seats Left</option>
-                <option value="RAC">RAC</option>
-                <option value="Waitlist">Waitlist</option>
-              </select>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Seat Availability Status
+                </label>
+                <select
+                  value={seatStatus}
+                  onChange={(e) => setSeatStatus(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium bg-white"
+                >
+                  <option value="Available">Available (Confirmed)</option>
+                  <option value="Few Seats Left">Few Seats Left</option>
+                  <option value="RAC">RAC (Reservation Against Cancellation)</option>
+                  <option value="Waitlist">Waitlist</option>
+                </select>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">Reservation inventory</span>
+              </div>
             </div>
           </div>
 
@@ -549,7 +569,7 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -558,7 +578,7 @@ export const LegEditModal: React.FC<LegEditModalProps> = ({
               className="px-5 py-2.5 rounded-xl bg-indigo-950 hover:bg-indigo-900 text-white text-xs font-bold shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
             >
               <Check className="w-4 h-4" />
-              <span>{initialLeg ? 'Save Changes' : 'Add Leg to Itinerary'}</span>
+              <span>{initialLeg ? 'Save Leg Changes' : 'Add Leg to Itinerary'}</span>
             </button>
           </div>
         </form>

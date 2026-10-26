@@ -23,7 +23,7 @@ def check_ai_rate_limit(request: Request, max_requests: int = 25, window_seconds
         logger.warning(f"AI rate limit exceeded for IP {client_ip}")
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Too many AI requests. Please wait {window_seconds} seconds before sending more prompts.",
+            detail=f"You've sent several requests in a short time. Please wait {window_seconds} seconds so I can recharge and assist you properly.",
             headers={"Retry-After": str(window_seconds)}
         )
     recent.append(now)
@@ -49,9 +49,9 @@ async def chat_with_assistant(
 @router.get("/quick-prompts")
 async def get_quick_prompts() -> List[Dict[str, str]]:
     return [
-        {"label": "Cheapest to Chennai", "prompt": "Find the cheapest way to travel from Bengaluru to Chennai tomorrow under ₹1,000."},
-        {"label": "Arrive Before 10 AM", "prompt": "Show fastest journeys from Bengaluru to Chennai arriving before 10 AM."},
-        {"label": "Multimodal Route", "prompt": "Plan a multimodal journey with cab for last mile and train for long distance."},
-        {"label": "Direct Flights Only", "prompt": "Show non-stop direct flights under ₹6,000."},
-        {"label": "My Bookings", "prompt": "Show my upcoming demo bookings and their current status."}
+        {"label": "Cheapest under ₹1,000", "prompt": "Find the cheapest journey from Bengaluru to Chennai tomorrow under ₹1,000."},
+        {"label": "Arrive before 10:00 AM", "prompt": "Show journeys from Bengaluru to Chennai arriving before 10:00 AM."},
+        {"label": "Train + Cab Connection", "prompt": "Plan a door-to-door journey combining an express train with a cab for the final leg."},
+        {"label": "Direct Flights Only", "prompt": "Show direct flights from Delhi to Mumbai under ₹5,000."},
+        {"label": "My Bookings", "prompt": "Show my upcoming travel reservations and boarding passes."}
     ]

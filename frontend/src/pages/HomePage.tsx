@@ -9,7 +9,7 @@ const POPULAR_ROUTES = [
   {
     from: 'Bengaluru',
     to: 'Chennai',
-    tag: 'High Frequency',
+    tag: 'Frequent Service',
     time: 'From 60m',
     fare: 'From ₹250',
     modes: ['Flight', 'Train', 'Bus', 'Cab'],
@@ -17,15 +17,15 @@ const POPULAR_ROUTES = [
   {
     from: 'Bengaluru',
     to: 'Hyderabad',
-    tag: 'Tech Hub Corridor',
-    time: 'From 65m',
+    tag: 'Express Corridor',
+    time: 'From 1h 05m',
     fare: 'From ₹890',
     modes: ['Flight', 'Train', 'Bus'],
   },
   {
     from: 'Delhi',
     to: 'Mumbai',
-    tag: 'Trunk Express',
+    tag: 'Air & Rail Express',
     time: 'From 1h 45m',
     fare: 'From ₹2,450',
     modes: ['Flight', 'Train'],
@@ -52,20 +52,20 @@ export const HomePage: React.FC = () => {
     <div className="space-y-16 py-8">
       {/* Hero Header */}
       <section className="text-center max-w-4xl mx-auto space-y-4 px-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-900 text-xs font-semibold shadow-xs">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-950 text-xs font-semibold shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-          <span>The Next-Generation Multimodal Travel Platform</span>
+          <span>Door-to-Door Multimodal Travel Platform</span>
         </div>
 
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight">
-          One unified platform for <br className="hidden sm:inline" />
+          Compare ways to get there and plan <br className="hidden sm:inline" />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-950 via-blue-600 to-violet-600">
-            Flights, Trains, Buses, Metro, & Cabs.
+            seamless journeys across India.
           </span>
         </h1>
 
         <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-          Compare six transportation modes side-by-side or plan seamless door-to-door multimodal itineraries with conversational AI.
+          Search flights, trains, buses, metro, cabs, and autos side-by-side. Connect legs with safe transfer buffers, or let our conversational AI assistant tailor your route.
         </p>
       </section>
 
@@ -84,9 +84,9 @@ export const HomePage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
               <Route className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-slate-900 text-base mb-2">Multimodal Trip Planner</h3>
+            <h3 className="font-bold text-slate-900 text-base mb-2">Connected Door-to-Door Itineraries</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Combine cabs to stations, high-speed rail, and last-mile autos into a single cohesive itinerary with transfer buffer validation.
+              Combine airport cabs, express rail, intercity buses, and local autos into one seamless itinerary with smart transfer buffer protection.
             </p>
           </div>
 
@@ -94,9 +94,9 @@ export const HomePage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center mb-4">
               <Sparkles className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-slate-900 text-base mb-2">Conversational AI Copilot</h3>
+            <h3 className="font-bold text-slate-900 text-base mb-2">Conversational AI Travel Assistant</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              State-synchronized AI assistant that parses natural-language prompts, applies live UI filters, and manages demo bookings.
+              Tell the assistant your timing, budget, or preferred transit modes. It instantly refines search filters and suggests optimized routes.
             </p>
           </div>
 
@@ -104,9 +104,9 @@ export const HomePage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-slate-900 text-base mb-2">FastAPI & Supabase Architecture</h3>
+            <h3 className="font-bold text-slate-900 text-base mb-2">End-to-End Travel Booking</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Clean backend separation with Supabase database schema, resilient offline seed fallback, and realistic simulated booking lifecycles.
+              Complete reservations with instant confirmation, inspect official e-tickets with PNR references, and pay securely via Razorpay.
             </p>
           </div>
         </div>
@@ -116,15 +116,15 @@ export const HomePage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Popular Corridors</h2>
-            <p className="text-xs text-slate-500">Frequently searched multimodal travel routes</p>
+            <h2 className="text-xl font-bold text-slate-900">Popular Travel Corridors</h2>
+            <p className="text-xs text-slate-500">Frequently searched multimodal routes connecting major Indian hubs</p>
           </div>
           <button
             type="button"
             onClick={() => navigate('/explore')}
             className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
           >
-            <span>View all journeys</span>
+            <span>Compare all journeys</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

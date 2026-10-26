@@ -107,7 +107,7 @@ export const TripPlannerPage: React.FC = () => {
     toggleOpen();
     const origin = legs[0]?.origin.city || 'Bengaluru';
     const dest = legs[legs.length - 1]?.destination.city || 'Chennai';
-    sendMessage(`Analyze my current ${legs.length}-leg multimodal route from ${origin} to ${dest}. Optimize transfer buffers, reduce total travel time, and verify if any connection is too tight.`);
+    sendMessage(`Analyze my current ${legs.length}-leg multimodal journey from ${origin} to ${dest}. Review connection buffers between vehicles, check whether any transfer window is too tight, and suggest ways to optimize total travel time.`);
   };
 
   const handleClearItinerary = () => {
@@ -119,11 +119,11 @@ export const TripPlannerPage: React.FC = () => {
       service_number: 'Ride #1',
       origin: { id: 'addr_1', name: 'Home / Pickup Location', city: 'Bengaluru', type: 'address' },
       destination: { id: 'dest_1', name: 'KSR Bengaluru Station', city: 'Bengaluru', type: 'railway_station' },
-      departure_time: '2026-10-13T08:00:00',
-      arrival_time: '2026-10-13T08:45:00',
+      departure_time: '2026-10-23T08:00:00',
+      arrival_time: '2026-10-23T08:45:00',
       duration_minutes: 45,
       fare: 350,
-      class_or_category: 'Sedan (4 seater)',
+      class_or_category: 'Sedan (4 Seater)',
       stops_count: 0,
       seat_status: 'Available',
     };
@@ -139,13 +139,13 @@ export const TripPlannerPage: React.FC = () => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-semibold mb-2">
             <Route className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Signature Multimodal Engine</span>
+            <span>Custom Multimodal Trip Planner</span>
           </div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Multimodal Trip Planner
+            Plan Connected Multimodal Journeys
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Build custom door-to-door routes chaining flights, trains, metro, buses, cabs, and autos with real-time transfer buffer validation.
+          <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+            Combine flights, trains, metro, buses, cabs, and autos into a seamless door-to-door itinerary. We calculate total travel time, validate transfer windows between vehicles, and calculate your total journey fares.
           </p>
         </div>
 
@@ -153,16 +153,16 @@ export const TripPlannerPage: React.FC = () => {
           <button
             type="button"
             onClick={handleAskAIToOptimize}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-violet-50 text-violet-800 border border-violet-200 hover:bg-violet-100 flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+            className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-violet-50 text-violet-800 border border-violet-200 hover:bg-violet-100 flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
           >
             <Sparkles className="w-3.5 h-3.5 text-violet-600" />
-            <span>Ask AI to Optimize</span>
+            <span>Ask AI to Refine Journey</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-950 text-white hover:bg-indigo-900 flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95"
+            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-950 text-white hover:bg-indigo-900 flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Add Connection Leg</span>
@@ -178,12 +178,15 @@ export const TripPlannerPage: React.FC = () => {
 
       {/* 3. Advisory Warning Banner if any connections are tight or impossible */}
       {activeItinerary?.warnings && activeItinerary.warnings.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs space-y-1.5 text-amber-900">
-          <div className="font-bold flex items-center gap-1.5 text-amber-950">
+        <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4.5 text-xs space-y-2 text-amber-900 shadow-2xs">
+          <div className="font-bold flex items-center gap-2 text-amber-950 text-sm">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Transfer Buffer Advisory ({activeItinerary.warnings.length})</span>
+            <span>Connection Window Advisory ({activeItinerary.warnings.length} {activeItinerary.warnings.length === 1 ? 'notice' : 'notices'})</span>
           </div>
-          <ul className="ml-5 list-disc space-y-1 text-amber-800">
+          <p className="text-[11px] text-amber-800">
+            We analyzed transfer windows between vehicles in your itinerary. Please review the recommendations below to ensure you have enough time between legs:
+          </p>
+          <ul className="ml-5 list-disc space-y-1 text-amber-900 font-medium text-xs">
             {activeItinerary.warnings.map((w, idx) => (
               <li key={idx}>{w}</li>
             ))}
@@ -194,55 +197,77 @@ export const TripPlannerPage: React.FC = () => {
       {/* 4. Timeline Sequence of Journey Legs */}
       <div className="space-y-1">
         <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider px-2 mb-2">
-          <span>Itinerary Leg Sequence ({legs.length} transport segments)</span>
-          <span>Door-to-door timeline</span>
+          <span>Route Timeline ({legs.length} connected {legs.length === 1 ? 'leg' : 'legs'})</span>
+          <span>Door-to-door schedule & connection buffers</span>
         </div>
 
-        {legs.map((leg, index) => (
-          <React.Fragment key={leg.id}>
-            {/* The Leg Card with Edit, Move Up/Down, Mode Swap, Delete */}
-            <LegCard
-              leg={leg}
-              index={index}
-              totalLegs={legs.length}
-              onEdit={handleEditLeg}
-              onRemove={removeLeg}
-              onMoveUp={handleMoveUp}
-              onMoveDown={handleMoveDown}
-              onQuickModeSwap={handleQuickModeSwap}
-            />
-
-            {/* Connection Buffer Card between consecutive legs */}
-            {index < legs.length - 1 && (
-              <TransferBufferCard
-                legA={leg}
-                legB={legs[index + 1]}
+        {legs.length === 0 ? (
+          <div className="bg-white rounded-3xl p-10 border border-slate-200 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto">
+              <Route className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">No journey legs added yet</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Choose one of the pre-configured route templates above or start building your custom itinerary with your first connection leg.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-5 py-2.5 rounded-xl bg-indigo-950 hover:bg-indigo-900 text-white text-xs font-bold shadow-md transition-all inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add First Leg</span>
+            </button>
+          </div>
+        ) : (
+          legs.map((leg, index) => (
+            <React.Fragment key={leg.id}>
+              {/* The Leg Card with Edit, Move Up/Down, Mode Swap, Delete */}
+              <LegCard
+                leg={leg}
                 index={index}
+                totalLegs={legs.length}
+                onEdit={handleEditLeg}
+                onRemove={removeLeg}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
+                onQuickModeSwap={handleQuickModeSwap}
               />
-            )}
-          </React.Fragment>
-        ))}
+
+              {/* Connection Buffer Card between consecutive legs */}
+              {index < legs.length - 1 && (
+                <TransferBufferCard
+                  legA={leg}
+                  legB={legs[index + 1]}
+                  index={index}
+                />
+              )}
+            </React.Fragment>
+          ))
+        )}
 
         {/* Quick Add Leg button at bottom of list */}
-        <div className="pt-2">
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="w-full py-3.5 border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl text-xs font-bold text-slate-600 hover:text-indigo-600 bg-white/50 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-          >
-            <Plus className="w-4 h-4 text-indigo-600" />
-            <span>+ Add Next Transit Leg / Last-Mile Connection</span>
-          </button>
-        </div>
+        {legs.length > 0 && (
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="w-full py-3.5 border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl text-xs font-bold text-slate-600 hover:text-indigo-600 bg-white/50 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-4 h-4 text-indigo-600" />
+              <span>+ Add Next Transit Leg or Last-Mile Ride</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 5. Cumulative Totals Bar & Booking CTA */}
-      {activeItinerary && (
+      {activeItinerary && legs.length > 0 && (
         <div className="sticky bottom-6 z-20 bg-indigo-950 text-white rounded-3xl p-6 shadow-2xl border border-indigo-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-6 backdrop-blur-md">
           <div className="grid grid-cols-3 gap-6 text-left">
             <div>
               <div className="text-[10px] text-indigo-300 uppercase tracking-wider font-semibold">
-                Total Duration
+                Total Travel Time
               </div>
               <div className="text-xl font-extrabold font-mono flex items-center gap-1.5 mt-0.5">
                 <Clock className="w-4 h-4 text-indigo-400" />
@@ -251,23 +276,32 @@ export const TripPlannerPage: React.FC = () => {
                   {activeItinerary.total_duration_minutes % 60}m
                 </span>
               </div>
+              <div className="text-[10px] text-indigo-300/80 mt-0.5">
+                Door-to-door transit & buffers
+              </div>
             </div>
 
             <div>
               <div className="text-[10px] text-indigo-300 uppercase tracking-wider font-semibold">
-                Transfers
+                Vehicle Transfers
               </div>
               <div className="text-xl font-extrabold font-mono mt-0.5">
-                {activeItinerary.transfers_count} {activeItinerary.transfers_count === 1 ? 'Transfer' : 'Transfers'}
+                {activeItinerary.transfers_count} {activeItinerary.transfers_count === 1 ? 'Connection' : 'Connections'}
+              </div>
+              <div className="text-[10px] text-indigo-300/80 mt-0.5">
+                {activeItinerary.transfer_buffer_minutes}m buffer total
               </div>
             </div>
 
             <div>
               <div className="text-[10px] text-indigo-300 uppercase tracking-wider font-semibold">
-                Cumulative Fare
+                Total Estimated Fare
               </div>
               <div className="text-2xl font-black font-mono text-emerald-400 mt-0.5">
                 ₹{activeItinerary.total_fare.toLocaleString()}
+              </div>
+              <div className="text-[10px] text-emerald-300/80 mt-0.5">
+                Estimated fare (1 traveler)
               </div>
             </div>
           </div>
@@ -278,8 +312,7 @@ export const TripPlannerPage: React.FC = () => {
               onClick={handleBookItinerary}
               className="px-7 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Book Entire Multimodal Trip Demo</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Review & Book Entire Journey →</span>
             </button>
           </div>
         </div>

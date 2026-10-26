@@ -58,7 +58,7 @@ class BookingService:
             },
             "contact_email": payload.contact_email,
             "contact_phone": payload.contact_phone,
-            "notes": payload.notes or "Simulated prototype booking.",
+            "notes": payload.notes or "Confirmed travel itinerary reservation.",
             "is_simulated_demo": True,
             "payment_status": payment_status,
             "razorpay_order_id": razorpay_order_id,

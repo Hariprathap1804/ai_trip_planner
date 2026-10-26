@@ -183,16 +183,16 @@ class UserRegister(BaseModel):
     def validate_name(cls, v):
         clean = v.strip()
         if len(clean) < 2:
-            raise ValueError("Name must be at least 2 characters.")
+            raise ValueError("Please enter your full name (at least 2 characters).")
         if re.search(r"[<>{}\[\];]", clean):
-            raise ValueError("Name contains invalid characters.")
+            raise ValueError("Full name cannot contain special characters (<, >, {, }, [, ], ;).")
         return clean
 
     @validator("email")
     def validate_email_format(cls, v):
         clean = v.strip().lower()
         if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", clean):
-            raise ValueError("Please provide a valid email address.")
+            raise ValueError("Please provide a valid email address (e.g. rahul.nair@example.com).")
         return clean
 
     @validator("phone")
@@ -216,7 +216,7 @@ class UserRegister(BaseModel):
         if not re.search(r"[0-9]", v):
             raise ValueError("Password must contain at least one number.")
         if len(set(v)) < 4:
-            raise ValueError("Password cannot consist of repeated characters. Please choose a stronger password.")
+            raise ValueError("Password cannot consist of repeated characters. Please choose a stronger password with diverse characters.")
         return v
 
 class UserLogin(BaseModel):
@@ -227,7 +227,7 @@ class UserLogin(BaseModel):
     def validate_login_email(cls, v):
         clean = v.strip().lower()
         if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", clean):
-            raise ValueError("Please provide a valid email address.")
+            raise ValueError("Please enter a valid email address.")
         return clean
 
 class UserResponse(BaseModel):

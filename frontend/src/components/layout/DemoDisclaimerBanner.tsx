@@ -9,16 +9,16 @@ export const DemoDisclaimerBanner: React.FC = () => {
           <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="font-semibold text-slate-900 flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            TripPilot AI Prototype
+            TripPilot AI Preview
           </span>
           <span className="text-slate-500 hidden sm:inline">|</span>
           <span className="text-slate-600 hidden sm:inline">
-            FastAPI + Supabase Integrated Multimodal Travel Engine
+            Multimodal Travel & Route Planning Platform
           </span>
         </div>
-        <div className="flex items-center gap-1.5 text-amber-700 font-medium">
+        <div className="flex items-center gap-1.5 text-amber-800 font-medium">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-          <span>Interactive Demo Data Only — No Real Fares or Tickets Issued</span>
+          <span>Interactive Demonstration — Fares and tickets are simulated for evaluation</span>
         </div>
       </div>
     </aside>

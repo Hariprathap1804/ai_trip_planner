@@ -27,7 +27,7 @@ export const useAiStore = create<AIState>((set, get) => ({
       id: 'welcome_1',
       sender: 'assistant',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      text: "Hello! I'm TripPilot AI, your multimodal travel companion. Ask me anything like *'Find the cheapest way to Chennai arriving before 10 AM'* or *'Plan a trip with a train and cab'*.",
+      text: "Hi there! I'm your TripPilot travel companion. I can help you search, compare, and connect journeys across flights, trains, buses, metro, cabs, and autos. Try asking something like *'Find the cheapest morning train to Chennai under ₹1,000'* or *'Plan a door-to-door trip combining a train and a cab'*.",
     },
   ],
   isThinking: false,
@@ -91,7 +91,7 @@ export const useAiStore = create<AIState>((set, get) => ({
         id: `err_${Date.now()}`,
         sender: 'assistant',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: "I encountered a hiccup processing your request. Please try again or use the search controls above.",
+        text: "I ran into a temporary connection issue while processing your request. Please try asking again in a moment, or adjust your search filters manually above.",
       };
       set({
         messages: [...get().messages, errorMsg],
@@ -150,7 +150,7 @@ export const useAiStore = create<AIState>((set, get) => ({
           id: 'welcome_1',
           sender: 'assistant',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: "Conversation cleared. How can I assist with your travels?",
+          text: "Conversation cleared. Where would you like to travel next?",
         },
       ],
     });

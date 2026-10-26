@@ -42,6 +42,9 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
   const action = message.action_proposal?.action;
   const isMultimodal = action === 'plan_multimodal_trip';
   const isQuickBook = action === 'quick_book';
+  const isCancel = action === 'cancel_demo_booking';
+  const isGetBookings = action === 'get_bookings';
+  const isOpenLogin = action === 'open_login';
   const params = message.action_proposal?.parameters;
 
   const itinerary = params?.itinerary;
@@ -76,6 +79,27 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
       setIsOpen(false);
       navigate('/booking/review');
     }
+  };
+
+  const handleCancelBooking = async () => {
+    if (message.action_proposal && !message.action_executed) {
+      await executeAction(message.action_proposal);
+    }
+  };
+
+  const handleViewBookings = async () => {
+    if (message.action_proposal && !message.action_executed) {
+      await executeAction(message.action_proposal);
+    }
+    setIsOpen(false);
+    navigate('/bookings');
+  };
+
+  const handleOpenLogin = async () => {
+    if (message.action_proposal && !message.action_executed) {
+      await executeAction(message.action_proposal);
+    }
+    openAuthModal('login', 'Please sign in to access your travel bookings');
   };
 
   const handleQuickPayRazorpay = async () => {
@@ -244,17 +268,31 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
                   <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
                 ) : isMultimodal ? (
                   <Route className="w-3.5 h-3.5 text-violet-600" />
+                ) : isCancel ? (
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
                 ) : (
                   <Sparkles className="w-3.5 h-3.5 text-violet-600" />
                 )}
                 <span>
-                  {isQuickBook ? 'QUICK BOOKING READY' : `ACTION: ${message.action_proposal.action.replace('_', ' ').toUpperCase()}`}
+                  {isQuickBook
+                    ? 'Recommended Journey for Review'
+                    : isMultimodal
+                    ? 'Connected Multimodal Plan'
+                    : isCancel
+                    ? 'Booking Cancellation Request'
+                    : isGetBookings
+                    ? 'My Bookings'
+                    : isOpenLogin
+                    ? 'Authentication Required'
+                    : 'Search & Filter Update'}
                 </span>
               </span>
               {message.action_executed && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                <span className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                  isCancel ? 'text-rose-700 bg-rose-100/80' : 'text-emerald-700 bg-emerald-100/80'
+                }`}>
                   <Check className="w-3 h-3" />
-                  Loaded
+                  {isCancel ? 'Cancellation Processed' : isQuickBook ? 'Itinerary Loaded' : isMultimodal ? 'Plan Ready' : 'Applied'}
                 </span>
               )}
             </div>
@@ -326,7 +364,7 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
                     {isProcessingPayment ? (
                       <>
                         <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Opening Razorpay Gateway...</span>
+                        <span>Connecting to Razorpay Secure Checkout...</span>
                       </>
                     ) : (
                       <>
@@ -373,7 +411,7 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
               </div>
             )}
 
-            {/* Action Buttons for standard actions */}
+            {/* Action Buttons based on action type */}
             {isMultimodal && !isQuickBook ? (
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
@@ -382,7 +420,7 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
                   className="py-1.5 px-2 bg-white hover:bg-slate-50 text-indigo-950 font-bold text-[11px] rounded-lg border border-indigo-200 flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-xs"
                 >
                   <Route className="w-3 h-3 text-indigo-600" />
-                  <span>Open Planner</span>
+                  <span>Open in Planner</span>
                 </button>
 
                 <button
@@ -390,8 +428,41 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
                   onClick={handleBookMultimodal}
                   className="py-1.5 px-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-all shadow-xs"
                 >
-                  <span>Book Demo</span>
+                  <span>Review Itinerary & Book</span>
                   <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            ) : isCancel && !message.action_executed ? (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleCancelBooking}
+                  className="w-full py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>Confirm Booking Cancellation</span>
+                </button>
+              </div>
+            ) : isGetBookings ? (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleViewBookings}
+                  className="w-full py-1.5 px-3 bg-indigo-950 hover:bg-indigo-900 text-white font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                >
+                  <span>View All Bookings</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : isOpenLogin ? (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleOpenLogin}
+                  className="w-full py-1.5 px-3 bg-indigo-950 hover:bg-indigo-900 text-white font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                >
+                  <span>Sign In to Your Account</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : !isQuickBook && !message.action_executed ? (
@@ -400,7 +471,7 @@ export const AIMessageBubble: React.FC<AIMessageBubbleProps> = ({ message }) => 
                 onClick={() => executeAction(message.action_proposal!)}
                 className="w-full py-1.5 px-3 bg-violet-700 hover:bg-violet-800 text-white font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-xs"
               >
-                <span>Apply to Website View</span>
+                <span>Apply Search & Filters</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             ) : null}

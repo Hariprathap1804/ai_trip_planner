@@ -205,20 +205,20 @@ export const MultimodalPresets: React.FC<MultimodalPresetsProps> = ({
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-indigo-600" />
           <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-            Quick Route Templates
+            Pre-Configured Route Templates
           </h3>
           <span className="text-[11px] text-slate-500 hidden sm:inline">
-            Load pre-configured multimodal itineraries or start from scratch
+            Explore sample connected journeys or customize each connection leg
           </span>
         </div>
 
         <button
           type="button"
           onClick={onClear}
-          className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-slate-200/60 cursor-pointer transition-colors"
+          className="text-xs font-semibold text-slate-600 hover:text-indigo-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer transition-colors shadow-2xs"
         >
           <PlusCircle className="w-3.5 h-3.5" />
-          <span>New Custom Plan</span>
+          <span>Clear & Build Custom</span>
         </button>
       </div>
 
@@ -228,9 +228,9 @@ export const MultimodalPresets: React.FC<MultimodalPresetsProps> = ({
             key={preset.id}
             type="button"
             onClick={() => onSelectPreset(preset.legs)}
-            className="text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group cursor-pointer"
+            className="text-left p-3.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group cursor-pointer"
           >
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-2">
               <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-100 group-hover:bg-indigo-50">
                 {preset.icon}
               </div>
@@ -244,10 +244,10 @@ export const MultimodalPresets: React.FC<MultimodalPresetsProps> = ({
             <div className="text-[11px] text-slate-500 truncate mt-0.5">
               {preset.tagline}
             </div>
-            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-mono">
-              <span>{preset.legs.length} transport legs</span>
+            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-mono">
+              <span>{preset.legs.length} connected legs</span>
               <span className="font-bold text-indigo-700">
-                ₹{preset.legs.reduce((acc, l) => acc + l.fare, 0).toLocaleString()}
+                Est. ₹{preset.legs.reduce((acc, l) => acc + l.fare, 0).toLocaleString()}
               </span>
             </div>
           </button>
